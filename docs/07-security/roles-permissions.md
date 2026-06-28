@@ -1,35 +1,38 @@
 # Roles & Permissions
 
 ## 目的
-- 定義主要角色、capability 與 trusted actor 邊界。
+- 定義 Role、Capability、敏感資料讀寫與 trusted actor 邊界。
 
-## 圖解
-```mermaid
-flowchart TD
-  AUTH[Firebase Auth identity] --> ACTOR[Trusted actor context]
-  ACTOR --> EMP[Employee capability]
-  ACTOR --> MAN[Manager capability]
-  ACTOR --> HR[HR capability]
-  ACTOR --> ADMIN[Admin capability]
-```
+## Role vs Capability
+| 概念 | 說明 |
+| --- | --- |
+| Role | 人在組織中的職責身分，例如 `Employee`、`Manager`、`HR` |
+| Capability | 系統允許執行的具體能力，例如 `leave.approve.team`、`payroll.run` |
+| 原則 | Auth 只證明 identity；role / capability 必須由 server-side actor context 解析 |
 
-## 規則
-- Auth provider 只證明 identity；角色、membership、scope、capability 由 server-side actor context 提供。
-- 最小權限優先；沒有明確 capability 的 command 不得放行。
-- Employee 不可自我核准；Manager 只可作用在授權範圍；HR / Admin 的 override 必須可追溯。
-- Payroll、permissions、audit log、敏感資料寫入不得由 Client Component 直接發生。
+## 權限矩陣
+| Capability | Employee | Manager | HR | Payroll Admin | System Admin |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `attendance.record.self` | ✓ | ✓ | ✓ |  | ✓ |
+| `attendance.read.team` |  | ✓ | ✓ |  | ✓ |
+| `leave.submit.self` | ✓ | ✓ | ✓ |  | ✓ |
+| `leave.approve.team` |  | ✓ | ✓ |  | ✓ |
+| `leave.override` |  |  | ✓ |  | ✓ |
+| `overtime.approve.team` |  | ✓ | ✓ |  | ✓ |
+| `payroll.run` |  |  | ✓ | ✓ | ✓ |
+| `payroll.read.detail` |  |  | ✓ | ✓ | ✓ |
+| `audit.read` |  |  | ✓ | ✓ | ✓ |
+| `permissions.manage` |  |  |  |  | ✓ |
 
-## 範例
-| Capability | Employee | Manager | HR | Admin |
-| --- | ---: | ---: | ---: | ---: |
-| `attendance.record.self` | ✓ | ✓ | ✓ | ✓ |
-| `leave.submit.self` | ✓ | ✓ | ✓ | ✓ |
-| `leave.read.team` |  | ✓ | ✓ | ✓ |
-| `leave.approve.team` |  | ✓ | ✓ | ✓ |
-| `leave.override` |  |  | ✓ | ✓ |
-| `payroll.run` |  |  | ✓ | ✓ |
-| `audit.read` |  |  | ✓ | ✓ |
-| `permissions.manage` |  |  |  | ✓ |
+## 讀寫 / 匯出規則
+| 資料類型 | 可讀 | 可寫 | 可匯出 |
+| --- | --- | --- | --- |
+| 個人出勤 / 請假 | self、授權 manager、HR | server-side use case | 受 actor capability 限制 |
+| 薪資明細 | HR、Payroll Admin、System Admin | server-side only | 嚴格 capability + audit |
+| audit log | HR、Payroll Admin、System Admin | append-only server-side | 嚴格 capability + audit |
+| 權限設定 | System Admin | server-side only | 嚴格 capability + audit |
 
-## 維護注意事項
-- 角色矩陣變更時同步更新 rules、Firestore schema、PR template 與相關 use case 文件。
+## 禁止事項
+- Employee 不可自我核准。
+- Client Component 不可直接寫入薪資、權限、稽核、敏感個資。
+- 沒有明確 capability 的操作一律拒絕。

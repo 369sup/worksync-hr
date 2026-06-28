@@ -1,35 +1,57 @@
 # Bounded Contexts
 
 ## 目的
-- 定義核心業務邊界、上下游關係與哪些能力只是 cross-cutting capability。
+- 定義各 Context 的責任、不負責事項、上下游與協作方式。
 
-## 圖解
+## Context Map
 ```mermaid
 flowchart LR
-  EMP[Employee] --> LEAVE[Leave]
-  EMP --> ATT[Attendance]
-  EMP --> OT[Overtime]
-  EMP --> APPROVAL[Approval]
-  APPROVAL --> LEAVE
-  APPROVAL --> OT
+  EMP[Employee]
+  ATT[Attendance]
+  LEAVE[Leave]
+  OT[Overtime]
+  APR[Approval]
+  PAY[Payroll]
+  AUDIT[Audit / Security]
+
+  EMP --> ATT
+  EMP --> LEAVE
+  EMP --> OT
+  EMP --> APR
+  APR --> LEAVE
+  APR --> OT
   LEAVE --> ATT
-  ATT --> PAY[Payroll]
+  ATT --> PAY
   LEAVE --> PAY
   OT --> PAY
-  AUDIT[Audit / Security capability] -. observes .-> LEAVE
-  AUDIT -. observes .-> ATT
-  AUDIT -. observes .-> PAY
+  AUDIT -. policy / audit .-> EMP
+  AUDIT -. policy / audit .-> ATT
+  AUDIT -. policy / audit .-> LEAVE
+  AUDIT -. policy / audit .-> OT
+  AUDIT -. policy / audit .-> APR
+  AUDIT -. policy / audit .-> PAY
 ```
 
-## 規則
-- `Employee` 擁有員工、membership、角色與 capability 的來源語意。
-- `Approval` 解析 approver、delegate 與責任分派，不擁有請假、加班或薪資狀態機。
-- `Payroll` 只消費已公開的 Attendance / Leave / Overtime 結果，不直接回寫上游。
-- `Audit / Security` 是 cross-cutting capability；記錄事實與權限治理，但不取代核心 Domain。
-- Context 間只用 query port、integration event、ACL 或明確 application contract 協作。
+## 責任矩陣
+| Context | 責任範圍 | 不負責的事項 |
+| --- | --- | --- |
+| `Employee` | 員工主檔、membership、角色與 capability snapshot | 打卡、請假、薪資計算 |
+| `Attendance` | 出勤紀錄、異常、結算狀態 | 權限來源、薪資最終計算 |
+| `Leave` | 請假申請、額度消耗、狀態流 | approver 真相、薪資發放 |
+| `Overtime` | 加班申請、補償模式、公開調整結果 | 原始 punch 真相、薪資主檔 |
+| `Approval` | approver / delegate 解析、責任指派 | 請假或加班 aggregate 內部狀態 |
+| `Payroll` | 計薪期間、輸入收斂、薪資結果 | 上游原始 document 擁有權 |
+| `Audit / Security` | 稽核、讀寫治理、匯出治理 | 取代任何核心 Domain 的狀態機 |
 
-## 範例
-- `Leave` 可依賴 `Employee` 提供的 membership / capability snapshot，但不能直接共享 Employee aggregate 內部狀態。
+## 協作規則
+- Context 間只透過 query port、公開 summary、integration event 或 ACL 協作。
+- 不得直接 import 他域 aggregate、entity、Firestore document。
+- 下游可快取 snapshot，但真相仍留在上游 Context。
 
-## 維護注意事項
-- 新增 Context、改名或調整責任時，先更新此圖、詞彙表與必要的 domain / application 文件。
+## 與 UI 的關係
+| UI 概念 | 說明 |
+| --- | --- |
+| `page` | 使用者入口，不是 use case |
+| `slot` | UI composition，不是 bounded context |
+| `route group` | 導覽與 layout 分群，不是 subdomain |
+| `dashboard` | 可同時組合多個 Context read model |

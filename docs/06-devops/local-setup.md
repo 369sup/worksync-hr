@@ -1,21 +1,37 @@
 # Local Setup
 
 ## 目的
-- 說明最小本地啟動與驗證步驟。
+- 對齊本地開發、Windows 11 安裝與 CI 版本。
 
-## 圖解
-1. 安裝 Node.js 22 與 pnpm 11。
-2. 執行 `pnpm install --frozen-lockfile`。
-3. 準備必要的 Firebase 與本地環境變數。
-4. 依需求執行 `pnpm lint`、`pnpm typecheck`、`pnpm build`、`pnpm dev`。
+## 版本對齊
+| 項目 | 版本 |
+| --- | --- |
+| Node.js | 22.x |
+| pnpm | 11.9.0 |
+| 驗證指令 | `pnpm lint`、`pnpm typecheck`、`pnpm build` |
 
-## 規則
-- 本地安裝與 CI 一致使用 pnpm。
-- 驗證至少先跑 lint、typecheck、build，再進入功能開發。
-- 若 build 需要抓取外部字型或其他網路資源，需先確認當前環境可存取。
+## Windows 11 + pnpm 流程
+| 步驟 | 說明 |
+| --- | --- |
+| 安裝 Node.js 22 | 建議使用 nvm-windows 或官方安裝程式 |
+| 啟用 Corepack | `corepack enable` |
+| 安裝 pnpm 11.9.0 | `corepack prepare pnpm@11.9.0 --activate` |
+| 安裝依賴 | `pnpm install` |
+| 啟動開發 | `pnpm dev` |
 
-## 範例
-- 目前 `src/app/layout.tsx` 透過 `next/font/google` 載入 Geist 字型；在網路受限環境執行 `pnpm build` 可能失敗。
+## 最小驗證流程
+```mermaid
+flowchart LR
+  Install[pnpm install] --> Lint[pnpm lint]
+  Lint --> Typecheck[pnpm typecheck]
+  Typecheck --> Build[pnpm build]
+  Build --> Dev[pnpm dev]
+```
 
-## 維護注意事項
-- 若新增 emulator、seed 或 health 檢查流程，請同步更新此文件與 `env-vars.md`。
+## Firebase Emulator
+- 全功能：`firebase emulators:start`
+- 指定服務：`firebase emulators:start --only auth,firestore,storage`
+
+## 已知限制
+- 目前 `pnpm build` 在受限網路環境可能因 `next/font/google` 抓取 Geist 字型失敗。
+- 若本地 shell 啟用 supply-chain / ignored builds 防護，`pnpm install` 可能先要求批准 build scripts。

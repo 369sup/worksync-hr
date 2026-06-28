@@ -1,26 +1,45 @@
 # Attendance Domain
 
-## 目的
-- 定義打卡、工作日出勤紀錄、異常與結算邊界。
+## 責任範圍
+- 打卡、工作日出勤紀錄、異常、校正、結算。
+- 對外提供 finalized attendance result / summary。
 
-## 圖解
+## 不負責的事項
+- 員工角色真相。
+- 請假審批。
+- 最終薪資結果。
+
+## Aggregate / Entity / Value Object 候選
+| 類型 | 候選 |
+| --- | --- |
+| Aggregate | `AttendanceRecord` |
+| Entity | `Punch`, `AttendanceAnomaly` |
+| Value Object | `WorkDate`, `WorkInterval`, `CorrectionReason`, `AttendanceStatus` |
+
+## 主要狀態機
 ```mermaid
 stateDiagram-v2
-  [*] --> Open: first punch
-  Open --> Corrected: CorrectAttendanceRecord
+  [*] --> Open: FirstPunch
+  Open --> Correcting: RequestCorrection
+  Correcting --> Open: AcceptCorrection
   Open --> Finalized: FinalizeAttendanceRecord
-  Corrected --> Finalized: FinalizeAttendanceRecord
-  Finalized --> [*]
+  Correcting --> Finalized: FinalizeAttendanceRecord
+  Finalized --> LockedForPayroll: LockByPayrollSnapshot
+  LockedForPayroll --> [*]
 ```
 
-## 規則
-- `AttendanceRecord` 以員工 + 工作日作為核心一致性邊界。
-- 同一時間不得存在互相衝突的進行中打卡狀態。
-- 補登、校正、請假套用與結算都必須經 domain 規則，而非直接改 document。
-- 已結算紀錄不得任意回到可編輯狀態。
+## Domain Event 候選
+- `AttendanceClockedIn`
+- `AttendanceClockedOut`
+- `AttendanceCorrectionRequested`
+- `AttendanceCorrected`
+- `AttendanceFinalized`
+- `AttendanceLockedForPayroll`
 
-## 範例
-- 重複 `clock in`、缺少必要 punch 或對 finalized record 再次修改，都應被拒絕。
-
-## 維護注意事項
-- 排班、多段上下班、跨日班與加班初算屬延伸規則，新增前先補文件決策。
+## 與其他 Context 的協作
+| 對象 | 協作方式 |
+| --- | --- |
+| `Employee` | 讀取有效員工與排班 / scope snapshot |
+| `Leave` | 套用 approved leave result 以消除異常或計算摘要 |
+| `Payroll` | 輸出 finalized summary，不回寫 payroll 狀態 |
+| `Audit / Security` | 記錄補登、覆寫、敏感檢視事件 |

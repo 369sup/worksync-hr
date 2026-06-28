@@ -1,17 +1,26 @@
 # MCP
 
 ## 目的
-- 記錄 AI 工具使用外部資源時的基本原則。
+- 定義外部工具使用順序與推薦清單。
 
-## 圖解
-- Repository Context → Tool → 結果 → 文件 / 程式碼。
+## Context7 規則
+| 主題 | 規則 |
+| --- | --- |
+| Next.js | 先用 Context7 查 App Router、Parallel Routes、Server Actions 官方文件 |
+| Firebase | 先查 Auth、Firestore、Storage、Rules 官方文件 |
+| shadcn/ui | 先查元件官方文件與 CLI / 組合方式 |
+| 原則 | 查完官方文件後，仍要回到本 repo 的 DDD / Security 規則判斷 |
 
-## 規則
-- 先讀 repo 再修改。
-- 外部工具產出需回到本專案規則檢查。
+## MCP 建議清單
+| 工具 | 用途 |
+| --- | --- |
+| GitHub | PR、issue、CI、review comments |
+| Context7 | Next.js、Firebase、shadcn/ui 官方文件 |
+| Firebase / Google Cloud | emulator、rules、部署相關查詢 |
+| Playwright | UI 行為與流程驗證 |
+| Filesystem | 讀 repo、比對 docs、檢查結構 |
 
-## 範例
-- 用 MCP 查 CI 後，仍要對照 DDD / Firebase 規則修正。
-
-## 維護注意事項
-- 工具鏈改變時再補充細節。
+## 使用原則
+- 先讀 repo 再查外部工具。
+- 外部資訊只作輔助，最終以本 repo canonical docs 為準。
+- 若外部建議違反 DDD / Hexagonal / Security 邊界，應拒絕採用。

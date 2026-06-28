@@ -1,50 +1,45 @@
 # Use Cases
 
 ## 目的
-- 列出主要 use case、trusted actor 邊界與跨 Context 協作方式。
+- 定義主要 use case、輸入輸出格式、trusted actor context 與對應 ports。
 
-## 圖解
-### Leave command flow
+## Trusted Actor Flow
 ```mermaid
 sequenceDiagram
-  actor E as Employee / Manager / HR
-  participant A as Server Action / Route Handler
-  participant U as Leave Use Case
-  participant Q as Employee / Approval Query Ports
-  participant R as Leave Repository
-  E->>A: 送出受保護操作
-  A->>A: 建立 trusted actor context
-  A->>U: command + actor
-  U->>Q: 查 employee / approver snapshot
-  U->>R: 讀寫 leave aggregate
+  actor User as Employee / Manager / HR / Admin
+  participant UI as Page / Form / Client UI
+  participant ADP as Server Action / Route Handler
+  participant ACT as Trusted Actor Context
+  participant UC as Use Case
+  participant PORT as Ports
+
+  User->>UI: 提交輸入
+  UI->>ADP: minimal input
+  ADP->>ACT: resolve identity / membership / capability
+  ACT-->>ADP: actor context
+  ADP->>UC: input + actor context
+  UC->>PORT: orchestrate
 ```
 
-### Payroll flow
-```mermaid
-sequenceDiagram
-  actor HR
-  participant A as Server-side adapter
-  participant U as RunPayroll
-  participant P as Attendance / Leave / Overtime / Employee Ports
-  HR->>A: 啟動計薪
-  A->>A: 驗證 capability
-  A->>U: command + actor
-  U->>P: 收斂公開輸入
-```
+## Use Case 輸入輸出格式
+| 主題 | 規則 |
+| --- | --- |
+| Input | 只放 use case 需要的 primitive、ID、period、reason、flags |
+| Output | 回傳 result、public snapshot、error code、next step，不回傳 SDK instance |
+| Actor | 必帶 `actorId`、`membershipId`、`capabilities`、`scope`、`requestSource` |
+| Error | 以 domain / application error code 表達，adapter 再轉成 UI / HTTP |
 
-## 規則
-- 每個 command 都由 server-side 建立 trusted actor context；client 只提供必要輸入。
-- Use case 不含 Firebase SDK，不直接操作 document 或 UI state。
-- Query 讀 read model / query port；command 走 aggregate 與 repository port。
-- 跨 Context 只協調公開契約，不共享 aggregate 或 persistence model。
+## 主要 Use Case 對照
+| Use case | Actor | Input 摘要 | Output 摘要 | 主要 ports |
+| --- | --- | --- | --- | --- |
+| `RecordPunch` | Employee | `employeeId`, `timestamp`, `action` | `attendanceRecordId`, `status` | `AttendanceRecordRepository`, `EmployeeProfileQueryPort`, `AuditPort` |
+| `SubmitLeaveRequest` | Employee | `employeeId`, `leaveType`, `period`, `reason` | `leaveRequestId`, `status`, `approverRef` | `LeaveRequestRepository`, `EmployeeProfileQueryPort`, `ApprovalQueryPort`, `AuditPort` |
+| `ApproveLeaveRequest` | Manager / HR | `leaveRequestId`, `decision`, `comment` | `status`, `effectivePeriod` | `LeaveRequestRepository`, `ApprovalQueryPort`, `AuditPort` |
+| `SubmitOvertimeRequest` | Employee | `employeeId`, `period`, `compensationMode`, `reason` | `overtimeRequestId`, `status` | `OvertimeRequestRepository`, `AttendanceSummaryQueryPort`, `ApprovalQueryPort`, `AuditPort` |
+| `RunPayroll` | Payroll Admin / HR | `payrollWindow`, `inputVersion` | `payrollPeriodId`, `status`, `summary` | `PayrollRepository`, `AttendanceSummaryQueryPort`, `LeaveAdjustmentQueryPort`, `OvertimeAdjustmentQueryPort`, `EmployeePayrollSnapshotQueryPort`, `AuditPort` |
 
-## 範例
-| Use case | 主要 actor | 主要 ports |
-| --- | --- | --- |
-| `RecordPunch` | Employee | `AttendanceRecordRepository`, `EmployeeProfileQueryPort` |
-| `SubmitLeaveRequest` | Employee | `LeaveRequestRepository`, `EmployeeProfileQueryPort`, `ApprovalQueryPort` |
-| `ResolveApprover` | Manager / HR / System | `ApprovalAssignmentRepository` 或對應 query port |
-| `RunPayroll` | HR | `PayrollRepository`, `AttendanceSummaryQueryPort`, `LeaveAdjustmentQueryPort`, `OvertimeAdjustmentQueryPort` |
-
-## 維護注意事項
-- 新流程先補本文件與 `ports.md`，再決定是否真的需要新的 adapter 或 collection。
+## Server Action / Route Handler 呼叫規則
+- Server Action：適合表單送出、同頁更新、需要 React mutation 的流程。
+- Route Handler：適合 API、webhook、非畫面驅動整合。
+- 兩者都必須在 adapter 層建立 trusted actor context，再呼叫 use case。
+- Client Component 只能呼叫 adapter，不可直接 new repository 或 import Firebase SDK 實作。

@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# worksync-hr
 
-## Getting Started
+> HR / attendance / leave / payroll 系統文件與實作骨架。
 
-First, run the development server:
+## 專案定位
+- 人資主檔、差勤、請假、加班、簽核、薪資、稽核。
+- 以 DDD + Hexagonal Architecture 保護核心規則與敏感資料邊界。
+- 前端使用 Next.js App Router，後端邊界以 Server Actions / Route Handlers 串接 Application Use Case。
 
+## 技術棧
+| 類別 | 技術 |
+| --- | --- |
+| Frontend | Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui |
+| Backend boundary | Server Actions、Route Handlers |
+| Firebase | Firebase Auth、Firestore、Storage |
+| Architecture | DDD + Hexagonal Architecture |
+
+## 本地開發指令
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
+pnpm lint
+pnpm typecheck
+pnpm build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 文件入口
+- 文件總入口：[`docs/README.md`](docs/README.md)
+- Copilot / 文件規則：[`.github/copilot-instructions.md`](.github/copilot-instructions.md)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 架構閱讀順序
+```txt
+docs/README.md
+→ docs/01-architecture/ddd-design-process.md
+→ docs/01-architecture/overview.md
+→ docs/01-architecture/strategic-design.md
+→ docs/01-architecture/bounded-contexts.md
+→ docs/01-architecture/tactical-design.md
+→ docs/01-architecture/hexagonal-architecture.md
+→ docs/01-architecture/dependency-rule.md
+→ docs/01-architecture/advanced-patterns.md
+→ docs/01-architecture/adr/README.md
+→ docs/02-domain/*
+→ docs/03-application/*
+→ docs/04-infrastructure/*
+→ docs/05-frontend/*
+→ docs/06-devops/*
+→ docs/07-security/*
+→ docs/08-ai-copilot/*
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 開發前注意事項
+- 先讀 `docs/README.md`、`docs/01-architecture/`、ADR，再判斷修改位置。
+- 先確認 bounded contexts、Ubiquitous Language、ports，再動手改 `src/**`。
+- UI route、page、slot 只是 composition，不是 bounded context、subdomain、use case。
+- 若只是補充規則、圖、流程，優先更新 canonical doc，不要濫增 ADR。
 
-## Learn More
+## 安全提醒
+- 薪資、權限、稽核資料不可由 Client Component 直接寫入。
+- Firebase document 不等於 Domain Entity，必須透過 mapper 轉換。
+- Firebase Auth 只證明 identity；角色、membership、capability 真相必須由 server-side trusted actor context 建立。
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 主要文件地圖
+| 目錄 | 用途 |
+| --- | --- |
+| `docs/00-project/` | 需求、願景、詞彙、roadmap |
+| `docs/01-architecture/` | DDD、六邊形架構、dependency rule、ADR |
+| `docs/02-domain/` | 各 bounded context 的責任、狀態機、事件 |
+| `docs/03-application/` | Use Case、Command / Query、Ports |
+| `docs/04-infrastructure/` | Firebase、schema、rules、emulator |
+| `docs/05-frontend/` | App Router、forms、page map、shadcn/ui |
+| `docs/06-devops/` | local setup、env、CI、部署 |
+| `docs/07-security/` | 角色權限、資料分級、audit |
+| `docs/08-ai-copilot/` | Copilot 工作流、提示模式、MCP |

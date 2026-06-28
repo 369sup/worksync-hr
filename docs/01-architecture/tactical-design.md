@@ -1,9 +1,9 @@
 # 戰術設計 Tactical Design
 
 ## 目的
-- 把通用語言收斂成純業務模型，不讓框架型別污染 Domain。
+- 將 strategic design 收斂成 Aggregate、Entity、Value Object、Domain Event 與 Repository Port。
 
-## Mermaid 圖解
+## Tactical building blocks
 ```mermaid
 classDiagram
   class AggregateRoot
@@ -19,22 +19,31 @@ classDiagram
   AggregateRoot *-- Entity
   AggregateRoot *-- ValueObject
   AggregateRoot --> DomainEvent
+  DomainService --> AggregateRoot
   Factory --> AggregateRoot
   RepositoryPort --> AggregateRoot
-  DomainService --> AggregateRoot
 ```
 
-## worksync-hr 套用方式
-- `Value Object` 用於日期區間、工時、身份快照等不可變概念。
-- `Entity / Aggregate Root` 管理請假單、出勤紀錄、計薪期間等生命週期。
-- `Repository` 只在核心定義介面，Firebase 實作留在 infrastructure。
+## `src` 對應建議
+| 概念 | 建議目錄 | 備註 |
+| --- | --- | --- |
+| Aggregate / Entity / VO | `src/domain/<context>/` | 純業務規則，不含 Firebase / Next.js |
+| Command / Query contract | `src/application/<context>/` | 可含 application DTO，但不是 document shape |
+| Repository Port | `src/application/<context>/ports/` 或 `src/domain/<context>/ports/` | 視 port owner 決定，但只放介面 |
+| Mapper / Adapter | `src/infrastructure/firebase/<context>/` | document ↔ domain / read model |
 
-## 規則
-- Value Object 必須不可變，且以值相等判斷。
-- Entity 必須有唯一識別與清楚的狀態轉移。
-- Aggregate Root 是一致性邊界，外部不可繞過它改內部狀態。
-- Domain Service 只放無法歸屬於單一 Aggregate 的業務規則。
+## 候選模型速查
+| Context | Aggregate Root 候選 | Entity / VO 候選 |
+| --- | --- | --- |
+| Employee | `Employee`、`Membership` | `EmploymentStatus`、`CapabilitySet` |
+| Attendance | `AttendanceRecord` | `Punch`、`WorkDate`、`CorrectionReason` |
+| Leave | `LeaveRequest` | `LeavePeriod`、`LeaveType`、`LeaveBalanceSnapshot` |
+| Overtime | `OvertimeRequest` | `OvertimePeriod`、`CompensationMode` |
+| Approval | `ApprovalAssignment` | `ApproverScope`、`DelegateWindow` |
+| Payroll | `PayrollPeriod`、`SalarySlip` | `Money`、`PayrollInputVersion` |
+| Audit | `AuditRecord` | `AuditAction`、`AuditResult` |
 
-## 維護注意事項
-- 新增欄位前先判斷它是 VO、Entity 還是 DTO。
-- 不要把 Firestore document shape 直接當 Domain model。
+## 不可犯錯
+- 不要把 Firestore document shape 當成 Aggregate。
+- 不要讓 Client Component 決定狀態轉移。
+- 不要把跨 Context 查詢邏輯塞進 Domain Entity。

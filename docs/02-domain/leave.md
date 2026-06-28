@@ -1,28 +1,48 @@
 # Leave Domain
 
-## 目的
-- 定義請假申請的核心狀態、規則與與其他流程的協作邊界。
+## 責任範圍
+- 請假申請、額度消耗、送審、核准、駁回、取消。
+- 對外提供 approved leave result / period summary。
 
-## 圖解
+## 不負責的事項
+- approver 真相來源。
+- 出勤原始 punch。
+- 薪資發放。
+
+## Aggregate / Entity / Value Object 候選
+| 類型 | 候選 |
+| --- | --- |
+| Aggregate | `LeaveRequest` |
+| Entity | `LeaveApprovalRecord`, `LeaveBalanceLedger` |
+| Value Object | `LeaveType`, `LeavePeriod`, `LeaveStatus`, `LeaveReason` |
+
+## 主要狀態機
 ```mermaid
 stateDiagram-v2
-  [*] --> Pending: SubmitLeaveRequest
-  Pending --> Approved: ApproveLeaveRequest
-  Pending --> Rejected: RejectLeaveRequest
-  Pending --> Cancelled: CancelLeaveRequest
-  Approved --> [*]
+  [*] --> Draft
+  Draft --> PendingApproval: SubmitLeaveRequest
+  PendingApproval --> Approved: ApproveLeaveRequest
+  PendingApproval --> Rejected: RejectLeaveRequest
+  PendingApproval --> Cancelled: CancelLeaveRequest
+  Approved --> CancelledAfterApproval: CancelApprovedLeave
   Rejected --> [*]
   Cancelled --> [*]
+  CancelledAfterApproval --> [*]
 ```
 
-## 規則
-- `LeaveRequest` 是一致性邊界；狀態只能由具語意的 domain 行為改變。
-- 申請人不得核准自己的假單；override 流程必須可追溯。
-- 已核准請假只公開結果給 Attendance / Payroll 消費，不共享內部狀態。
-- `approved`、`rejected`、`cancelled` 皆為終止狀態，不可互相轉換。
+## Domain Event 候選
+- `LeaveRequestSubmitted`
+- `LeaveRequestApproved`
+- `LeaveRequestRejected`
+- `LeaveRequestCancelled`
+- `LeaveBalanceConsumed`
+- `LeaveOverrideApplied`
 
-## 範例
-- 超過可用額度、期間非法或缺少 approver 的申請應被拒絕或阻擋送出。
-
-## 維護注意事項
-- 新增假別、額度或撤銷已核准假單規則前，先更新 use case、ports 與 security 文件。
+## 與其他 Context 的協作
+| 對象 | 協作方式 |
+| --- | --- |
+| `Employee` | 取得身份、部門、主管與額度 scope |
+| `Approval` | 解析 approver 與指派責任 |
+| `Attendance` | 輸出核准結果供出勤套用 |
+| `Payroll` | 輸出已核准假別與期間摘要 |
+| `Audit / Security` | 記錄 override、理由、敏感查閱 |

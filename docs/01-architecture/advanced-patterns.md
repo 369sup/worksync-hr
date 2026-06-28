@@ -1,33 +1,30 @@
 # 進階落地模式 Advanced Patterns
 
 ## 目的
-- 只在效能、資料隔離、一致性與追溯需求明確時，引入更進階模式。
+- 只在需求明確時導入 DTO / CQRS / Outbox / Event Sourcing。
 
-## Mermaid 圖解
+## 決策圖
 ```mermaid
 flowchart TD
-  DTO[外部請求 DTO] --> APP[Application Command / Query]
-  APP --> DOMAIN[Domain Entity / Value Object]
-  DOMAIN --> EVENT[Domain Event]
-  EVENT --> OUTBOX[Outbox Events]
-  OUTBOX --> ASYNC[Async Handler / Integration]
-  APP --> CMD[Command Model]
-  APP --> QUERY[Query Model]
-  QUERY --> READ[Read Projection / Report View]
+  NEED[新需求] --> DTO{只是 adapter / app 輸入輸出整理?}
+  DTO -- yes --> DTOOK[使用 DTO，勿進 Domain]
+  DTO -- no --> CQRS{讀寫模型差異大?}
+  CQRS -- yes --> CQRSOK[評估 CQRS read model]
+  CQRS -- no --> OUTBOX{需要跨服務一致性?}
+  OUTBOX -- yes --> OUTBOXOK[評估 Outbox]
+  OUTBOX -- no --> ES{需要完整事件追溯?}
+  ES -- yes --> ESOK[評估 Event Sourcing]
+  ES -- no --> SIMPLE[維持基本 DDD + Hexagonal]
 ```
 
-## worksync-hr 套用方式
-- DTO 放在 adapter / application 邊界；VO 留在 Domain。
-- 薪資報表、差勤統計可逐步導入 CQRS 讀模型。
-- Firestore 事件一致性需求可先用 `outbox_events` collection。
-- Event Sourcing 不預設採用，只在薪資、法遵、稽核追溯需求明確時評估。
+## 採用規則
+| 模式 | 何時考慮 | 不要做什麼 |
+| --- | --- | --- |
+| DTO | adapter / use case 邊界需要輸入輸出模型 | 不要把 DTO 當 VO |
+| CQRS | 查詢投影與寫模型差異很大 | 不要為了潮流預設拆讀寫 |
+| Outbox | 事件發布與資料異動需一致 | 不要先做分散式複雜方案 |
+| Event Sourcing | 法遵、薪資、稽核追溯需求高度明確 | 不要在需求未定時導入 |
 
-## 規則
-- DTO 不等於 Domain Model。
-- 不要把 Firestore document shape 當 Domain Entity。
-- CQRS 先解決讀寫壓力，再引入複雜度。
-- Outbox 與 Event Sourcing 只在需求證明後採用。
-
-## 維護注意事項
-- 若進階模式無法說清成本與收益，就先不要用。
-- 引入模式時，需同步更新 architecture、domain、application 與 infrastructure 文件。
+## 文件規則
+- 新模式採用前，先更新 canonical docs。
+- 只有重大、耐久、難逆轉決策才寫 ADR。

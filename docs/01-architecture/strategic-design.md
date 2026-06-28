@@ -1,30 +1,62 @@
 # 戰略設計 Strategic Design
 
 ## 目的
-- 先看整體業務疆域，再切出 worksync-hr 的核心邊界與語言。
+- 先切清業務疆域、bounded contexts 與跨 Context 依賴，再進入 tactical design。
 
-## Mermaid 圖解
+## Subdomain 分類
+| 類型 | Context |
+| --- | --- |
+| Core Domain | `Attendance`、`Leave`、`Payroll` |
+| Supporting Domain | `Employee`、`Overtime`、`Approval` |
+| Cross-cutting capability | `Audit / Security` |
+
+## Context Map
 ```mermaid
-flowchart TD
-  BIZ[企業業務疆域] --> SUB[Subdomain 分類]
-  SUB --> CORE[Core Domain]
-  SUB --> SUPPORT[Supporting Domain]
-  SUB --> GENERIC[Generic Domain]
-  CORE --> BC[Bounded Context]
-  BC --> UL[Ubiquitous Language]
-  BC --> MAP[Context Map]
+flowchart LR
+  EMP[Employee]
+  ATT[Attendance]
+  LEAVE[Leave]
+  OT[Overtime]
+  APR[Approval]
+  PAY[Payroll]
+  AUDIT[Audit / Security]
+
+  EMP --> ATT
+  EMP --> LEAVE
+  EMP --> OT
+  EMP --> APR
+  APR --> LEAVE
+  APR --> OT
+  LEAVE --> ATT
+  ATT --> PAY
+  LEAVE --> PAY
+  OT --> PAY
+  AUDIT -. observe / govern .-> EMP
+  AUDIT -. observe / govern .-> ATT
+  AUDIT -. observe / govern .-> LEAVE
+  AUDIT -. observe / govern .-> OT
+  AUDIT -. observe / govern .-> APR
+  AUDIT -. observe / govern .-> PAY
 ```
 
-## worksync-hr 套用方式
-- `Employee`、`Attendance`、`Leave`、`Overtime`、`Approval`、`Payroll` 是主要 bounded contexts。
-- `Audit / Security` 為 cross-cutting capability，治理權限與稽核，不直接取代核心 Domain。
-- 先對齊 `docs/00-project/glossary.md` 與 `bounded-contexts.md` 再命名程式。
+## 上下游關係
+| Upstream | Downstream | 協作方式 |
+| --- | --- | --- |
+| `Employee` | `Attendance`、`Leave`、`Overtime`、`Approval`、`Payroll` | membership / capability snapshot、query port |
+| `Approval` | `Leave`、`Overtime` | approver resolution、assignment result |
+| `Leave` | `Attendance`、`Payroll` | approved leave result、period summary |
+| `Attendance` | `Payroll` | attendance summary / finalized result |
+| `Overtime` | `Payroll` | overtime adjustment / compensation result |
+| `Audit / Security` | 全域 | audit event、policy guard、read/export governance |
 
-## 規則
-- 先確認 Subdomain，再切 Bounded Context。
-- 同一個 Context 內只使用一套通用語言。
-- 跨 Context 協作要先說清上游 / 下游與依賴方向。
+## 命名規則
+- Context 內使用單一 Ubiquitous Language。
+- 跨 Context 只公開 snapshot、summary、assignment、result 等明確契約。
+- 不用 UI 名稱替代 Domain 名稱，例如 `PayrollPageData` 不能取代 `PayrollPeriod`。
 
-## 維護注意事項
-- 新增核心功能前，先補詞彙、邊界與 context map。
-- 若只是 UI 分頁變更，不要反向改寫 Domain 邊界。
+## 決策節點
+| 問題 | 先看什麼 |
+| --- | --- |
+| 新功能屬哪個 Context | `docs/00-project/glossary.md`、`bounded-contexts.md` |
+| 需要新 Context 嗎 | 是否出現獨立語言、生命週期、一致性邊界 |
+| 只是 UI 分頁嗎 | 優先看 `docs/05-frontend/app-router.md`，不要誤切 Domain |

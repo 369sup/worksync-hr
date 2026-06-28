@@ -1,9 +1,9 @@
 # 六邊形架構 Hexagonal Architecture
 
 ## 目的
-- 用 Ports & Adapters 保護 Application 與 Domain 核心，隔離 Next.js、Firebase、HTTP 與 UI。
+- 用 Ports & Adapters 隔離 UI、HTTP、Firebase 與核心業務。
 
-## Mermaid 圖解
+## 架構圖
 ```mermaid
 flowchart LR
   subgraph Driving[Driving / Inbound Adapters]
@@ -19,39 +19,41 @@ flowchart LR
   end
 
   subgraph Driven[Driven / Outbound Adapters]
-    FS[Firestore Repository]
-    AUTH[Firebase Auth]
-    STORAGE[Storage Adapter]
+    REP[Firestore Repository Adapter]
+    AUTH[Firebase Auth Adapter]
+    ST[Storage Adapter]
+    AUD[Audit Adapter]
   end
 
   UI --> SA
+  UI --> RH
   SA --> UC
   RH --> UC
   UC --> DOM
   UC --> PORTS
-  FS -. implements .-> PORTS
+  REP -. implements .-> PORTS
   AUTH -. implements .-> PORTS
-  STORAGE -. implements .-> PORTS
+  ST -. implements .-> PORTS
+  AUD -. implements .-> PORTS
 ```
 
-## worksync-hr 套用方式
-- UI 層使用 App Router、Parallel Routes、Server Actions、Route Handlers、shadcn/ui。
-- Application layer 只負責 use case orchestration、權限入口、port 協調。
-- Infrastructure layer 才能實作 Firestore repository、Auth adapter、Storage adapter、mapper。
+## Port 分類
+| 類型 | 目的 | 範例 |
+| --- | --- | --- |
+| Inbound | 進入核心的 use case contract | `SubmitLeaveRequest`, `RunPayroll` |
+| Repository Port | Aggregate 持久化抽象 | `LeaveRequestRepository` |
+| Query Port | 公開 snapshot / read model | `AttendanceSummaryQueryPort` |
+| Service Port | 時鐘、actor、audit、storage | `TrustedActorContextPort`, `AuditPort` |
 
-## 規則
-- Domain 不可知道 React、Next.js、Firebase SDK。
-- Application 只依賴 Domain 與 ports。
-- Driving Adapter 呼叫 Inbound Port；Driven Adapter 實作 Outbound Port。
-- 敏感寫入必須經 server-side trusted actor context。
+## Adapter 規則
+- Server Action / Route Handler 負責輸入驗證、trusted actor context、錯誤轉譯。
+- Firebase adapter 負責 SDK 呼叫、mapper、重試 / 失敗轉譯。
+- UI 只依賴 use case 與 read model，不碰 repository 實作。
 
 ## Parallel Routes 與 DDD 邊界
-
-- 後台主應用區預設使用 Parallel Routes，作為 UI composition pattern。
-- Slot 不等於 Bounded Context；route group 不等於 Subdomain；page 不等於 Use Case。
-- UI layout 只負責組裝 slot，不可決定 Domain model 或跨層依賴方向。
-- Parallel Routes 可搭配 named slots、`default.tsx`、Intercepting Routes，但核心邊界仍由 DDD + Hexagonal Architecture 決定。
-
-## 維護注意事項
-- 新增整合前先判斷是否需要新 port。
-- 若只是換技術供應者，不要讓 adapter 洩漏型別進核心。
+| 主題 | 規則 |
+| --- | --- |
+| Parallel Routes | 僅是 UI composition pattern |
+| named slot | 只切畫面，不切 Domain model |
+| `default.tsx` | 處理 fallback，不改變核心邊界 |
+| Intercepting Routes | 用於 modal deep link，不可繞過 use case |
