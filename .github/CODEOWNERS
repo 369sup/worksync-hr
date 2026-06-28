@@ -1,8 +1,13 @@
-* @your-github-account
+# Global ownership
+* @369sup
 
-/docs/ @your-github-account
-/docs/02-domain/ @your-github-account
-/src/domain/ @your-github-account
-/src/application/ @your-github-account
-/firestore.rules @your-github-account
-/storage.rules @your-github-account
+# Governance and architecture
+/.github/ @369sup
+/docs/ @369sup
+
+# Core boundaries
+/src/domain/ @369sup
+/src/application/ @369sup
+/src/infrastructure/firebase/ @369sup
+/firestore.rules @369sup
+/storage.rules @369sup

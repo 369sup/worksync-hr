@@ -1,29 +1,35 @@
 # Roles & Permissions
 
 ## 目的
-- 定義主要角色的高層級權限邊界。
+- 定義主要角色、capability 與 trusted actor 邊界。
 
 ## 圖解
 ```mermaid
 flowchart TD
-  Admin --> HR
-  HR --> Manager
-  Manager --> Employee
+  AUTH[Firebase Auth identity] --> ACTOR[Trusted actor context]
+  ACTOR --> EMP[Employee capability]
+  ACTOR --> MAN[Manager capability]
+  ACTOR --> HR[HR capability]
+  ACTOR --> ADMIN[Admin capability]
 ```
 
-| 角色 | 可管理範圍 | 敏感寫入 |
-| --- | --- | --- |
-| Admin | 系統、角色、稽核 | 可，需 server-side |
-| HR | 員工、薪資、報表 | 可，需 server-side |
-| Manager | 團隊審批、查看團隊資料 | 部分，需 server-side |
-| Employee | 個人資料、打卡、請假 | 僅非敏感個人資料 |
-
 ## 規則
-- Payroll、permissions、audit log 不得由 Client Component 直接寫入。
-- 最小權限優先，角色升級需留下稽核。
+- Auth provider 只證明 identity；角色、membership、scope、capability 由 server-side actor context 提供。
+- 最小權限優先；沒有明確 capability 的 command 不得放行。
+- Employee 不可自我核准；Manager 只可作用在授權範圍；HR / Admin 的 override 必須可追溯。
+- Payroll、permissions、audit log、敏感資料寫入不得由 Client Component 直接發生。
 
 ## 範例
-- Employee 可送出請假申請，但不可直接核准自己的申請。
+| Capability | Employee | Manager | HR | Admin |
+| --- | ---: | ---: | ---: | ---: |
+| `attendance.record.self` | ✓ | ✓ | ✓ | ✓ |
+| `leave.submit.self` | ✓ | ✓ | ✓ | ✓ |
+| `leave.read.team` |  | ✓ | ✓ | ✓ |
+| `leave.approve.team` |  | ✓ | ✓ | ✓ |
+| `leave.override` |  |  | ✓ | ✓ |
+| `payroll.run` |  |  | ✓ | ✓ |
+| `audit.read` |  |  | ✓ | ✓ |
+| `permissions.manage` |  |  |  | ✓ |
 
 ## 維護注意事項
-- 角色矩陣變更時同步更新 rules 與 page map。
+- 角色矩陣變更時同步更新 rules、Firestore schema、PR template 與相關 use case 文件。

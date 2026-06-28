@@ -1,67 +1,50 @@
 # Use Cases
 
 ## 目的
-- 列出主要 use case 與流程邊界。
+- 列出主要 use case、trusted actor 邊界與跨 Context 協作方式。
 
 ## 圖解
-### 員工打卡
+### Leave command flow
 ```mermaid
 sequenceDiagram
-  actor E as Employee
-  participant UI
-  participant UC as ClockIn/ClockOut Use Case
-  participant Repo as Attendance Port
-  E->>UI: 送出打卡
-  UI->>UC: 呼叫 use case
-  UC->>Repo: 儲存 / 讀取紀錄
+  actor E as Employee / Manager / HR
+  participant A as Server Action / Route Handler
+  participant U as Leave Use Case
+  participant Q as Employee / Approval Query Ports
+  participant R as Leave Repository
+  E->>A: 送出受保護操作
+  A->>A: 建立 trusted actor context
+  A->>U: command + actor
+  U->>Q: 查 employee / approver snapshot
+  U->>R: 讀寫 leave aggregate
 ```
 
-### 請假申請
-```mermaid
-sequenceDiagram
-  actor E as Employee
-  participant UI
-  participant UC as SubmitLeaveRequest
-  participant Repo as Leave Port
-  participant Ap as Approval Port
-  E->>UI: 送出請假
-  UI->>UC: 建立申請
-  UC->>Repo: 儲存草稿/申請
-  UC->>Ap: 建立審批請求
-```
-
-### 加班申請
-```mermaid
-sequenceDiagram
-  actor E as Employee
-  participant UI
-  participant UC as SubmitOvertimeRequest
-  participant Repo as Attendance Port
-  participant Ap as Approval Port
-  E->>UI: 送出加班申請
-  UI->>UC: 呼叫 use case
-  UC->>Repo: 保存加班資料
-  UC->>Ap: 建立審批
-```
-
-### 薪資結算
+### Payroll flow
 ```mermaid
 sequenceDiagram
   actor HR
-  participant UI
-  participant UC as RunPayroll
-  participant Ports as Attendance/Leave/Payroll Ports
-  HR->>UI: 啟動結算
-  UI->>UC: 呼叫 use case
-  UC->>Ports: 讀取核准資料並寫入 payroll
+  participant A as Server-side adapter
+  participant U as RunPayroll
+  participant P as Attendance / Leave / Overtime / Employee Ports
+  HR->>A: 啟動計薪
+  A->>A: 驗證 capability
+  A->>U: command + actor
+  U->>P: 收斂公開輸入
 ```
 
 ## 規則
-- Use case 不含 Firebase SDK。
-- 每個流程只暴露必要輸入與輸出。
+- 每個 command 都由 server-side 建立 trusted actor context；client 只提供必要輸入。
+- Use case 不含 Firebase SDK，不直接操作 document 或 UI state。
+- Query 讀 read model / query port；command 走 aggregate 與 repository port。
+- 跨 Context 只協調公開契約，不共享 aggregate 或 persistence model。
 
 ## 範例
-- `RunPayroll` 讀取 Attendance、Leave、Payroll ports。
+| Use case | 主要 actor | 主要 ports |
+| --- | --- | --- |
+| `RecordPunch` | Employee | `AttendanceRecordRepository`, `EmployeeProfileQueryPort` |
+| `SubmitLeaveRequest` | Employee | `LeaveRequestRepository`, `EmployeeProfileQueryPort`, `ApprovalQueryPort` |
+| `ResolveApprover` | Manager / HR / System | `ApprovalAssignmentRepository` 或對應 query port |
+| `RunPayroll` | HR | `PayrollRepository`, `AttendanceSummaryQueryPort`, `LeaveAdjustmentQueryPort`, `OvertimeAdjustmentQueryPort` |
 
 ## 維護注意事項
-- 新流程先補本文件，再決定是否需要新 port。
+- 新流程先補本文件與 `ports.md`，再決定是否真的需要新的 adapter 或 collection。

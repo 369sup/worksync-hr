@@ -1,27 +1,33 @@
 # 架構總覽
 
 ## 目的
-- 快速說明系統主要層次與外部服務。
+- 快速說明 worksync-hr 的主要層次、Firebase 角色與敏感資料邊界。
 
 ## 圖解
 ```mermaid
 flowchart TD
-  U[使用者] --> UI[Next.js App Router UI]
-  UI --> APP[Application Use Cases]
-  APP --> DOM[Domain Model]
-  APP --> PORTS[Ports]
-  PORTS --> FIRE[Firebase Adapters]
-  FIRE --> AUTH[Firebase Auth]
-  FIRE --> FS[Firestore]
-  FIRE --> ST[Storage]
+  USER[User / Browser] --> UI[Next.js App Router
+Pages / Layouts / Client UI]
+  UI --> INBOUND[Route Handlers / Server Actions]
+  INBOUND --> APP[Application Use Cases]
+  APP --> DOMAIN[Domain Model]
+  APP --> PORTS[Ports / Query Ports]
+  PORTS --> ADP[Firebase Adapters / Other Adapters]
+  ADP --> AUTH[Firebase Auth]
+  ADP --> FS[Firestore]
+  ADP --> ST[Storage]
+  AUTH --> ACTOR[Trusted Actor Context]
+  ACTOR --> APP
 ```
 
 ## 規則
-- Domain 保持框架無關。
-- Firebase 只透過 adapter 進出。
+- UI 與 Adapter 依賴核心；核心不依賴 Next.js、React、Firebase SDK。
+- Firebase Auth 只證明 identity；角色、membership、capability 需由 server-side actor context 解析。
+- Firestore document、Storage metadata 與 Domain entity 必須經 mapper 轉換。
+- Payroll、permissions、audit 等敏感流程不得由 Client Component 直接寫入。
 
 ## 範例
-- 請假申請由 UI 觸發 use case，再經 port 存取 Firestore。
+- 送出請假時，UI 只送出必要輸入；Server Action 建立 trusted actor context，再呼叫 `SubmitLeaveRequest`。
 
 ## 維護注意事項
-- 外部服務若新增，先更新此圖。
+- 新增外部服務、公開契約或跨 Context 資料流時，先更新此圖與對應規則文件。

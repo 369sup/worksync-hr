@@ -1,26 +1,58 @@
-## 摘要
-- 說明本次變更目的。
+## Problem
 
-## 變更內容
-- 條列主要修改。
+<!-- 這個變更要解決的根本問題，以及不處理時的影響。 -->
 
-## DDD / 六邊形架構檢查
-- [ ] Domain layer 未新增 React / Next.js / Firebase import
-- [ ] Application layer 僅依賴 ports，未直接依賴 Firebase SDK
-- [ ] Infrastructure layer 才實作 adapter / mapper
-- [ ] Firebase document 與 Domain entity 已透過 mapper 轉換
+## Assumptions
 
-## Firebase 安全檢查
-- [ ] 薪資、權限、稽核資料未由 Client Component 直接寫入
-- [ ] Firestore / Storage rules 已同步檢查
-- [ ] 敏感欄位僅透過受控 server-side 流程更新
+- Facts:
+- Assumptions:
+- Constraints:
 
-## 文件同步
-- [ ] `docs/` 已同步更新
-- [ ] 如有重大架構決策，已新增 ADR
-- [ ] Copilot / GitHub 設定未與既有規則衝突
+## Design
 
-## 驗證
+<!-- 說明方案、資料流與關鍵設計決策。 -->
+
+## Context and layer
+
+- Bounded Context:
+- Layers / Adapters:
+- Public contract, schema, or rules impact:
+
+## Trade-offs
+
+<!-- 說明成本、風險與未採用方案。 -->
+
+## Documentation impact
+
+- [ ] 不影響 canonical docs
+- [ ] 已先更新受影響的 canonical docs（請列出路徑）
+- [ ] Mermaid、規則與文件沒有出現第二份真相來源
+- [ ] 沒有以範例、備忘錄或暫時性文件取代正式決策
+
+Updated docs:
+
+## Security and data impact
+
+- [ ] 不影響 authentication、authorization、audit、roles、payroll 或敏感資料
+- [ ] 已說明並測試 security / data impact
+
+Details:
+
+## Durable architecture decision
+
+- [ ] 不需要 ADR
+- [ ] 需要 ADR，且已更新或新增對應紀錄
+
+ADR:
+
+## Validation
+
+只勾選實際執行且成功的命令；既有失敗請在表格中分開說明。
+
 - [ ] `pnpm lint`
 - [ ] `pnpm typecheck`
 - [ ] `pnpm build`
+
+| Command | Result / evidence |
+| ------- | ----------------- |
+|         |                   |
