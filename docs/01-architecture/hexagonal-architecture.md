@@ -35,7 +35,7 @@ flowchart LR
 ```
 
 ## worksync-hr 套用方式
-- UI 層使用 App Router、Server Actions、Route Handlers、shadcn/ui。
+- UI 層使用 App Router、Parallel Routes、Server Actions、Route Handlers、shadcn/ui。
 - Application layer 只負責 use case orchestration、權限入口、port 協調。
 - Infrastructure layer 才能實作 Firestore repository、Auth adapter、Storage adapter、mapper。
 
@@ -44,6 +44,13 @@ flowchart LR
 - Application 只依賴 Domain 與 ports。
 - Driving Adapter 呼叫 Inbound Port；Driven Adapter 實作 Outbound Port。
 - 敏感寫入必須經 server-side trusted actor context。
+
+## Parallel Routes 與 DDD 邊界
+
+- 後台主應用區預設使用 Parallel Routes，作為 UI composition pattern。
+- Slot 不等於 Bounded Context；route group 不等於 Subdomain；page 不等於 Use Case。
+- UI layout 只負責組裝 slot，不可決定 Domain model 或跨層依賴方向。
+- Parallel Routes 可搭配 named slots、`default.tsx`、Intercepting Routes，但核心邊界仍由 DDD + Hexagonal Architecture 決定。
 
 ## 維護注意事項
 - 新增整合前先判斷是否需要新 port。

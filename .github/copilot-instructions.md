@@ -39,9 +39,14 @@
 
 ## Next.js App Router rules
 - 使用 Next.js App Router。
+- 後台主應用區預設使用 Parallel Routes。
 - 預設 Server Component。
 - Client Component 只用於互動狀態、表單、瀏覽器 API。
-- 不要預設使用 Parallel Routes；只有明確需要多 slot 才用，且要補 `default.tsx`。
+- Dashboard、工作台、簽核、薪資、員工詳情、差勤檢查等多區塊頁面，優先使用 named slots。
+- 每個 named slot 必須提供 `default.tsx`；`@modal/default.tsx` 通常回傳 `null`。
+- 需要 modal deep link 時，可搭配 Intercepting Routes。
+- 簡單 auth / public / one-off page 可使用普通 routes。
+- Slot 不等於 Bounded Context；UI layout 不可決定 Domain model。
 
 ## Documentation rules
 - 文件使用繁體中文。

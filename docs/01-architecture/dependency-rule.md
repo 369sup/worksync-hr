@@ -35,6 +35,15 @@ flowchart BT
 - UI / App Router 屬 adapter；不能反向決定 Domain 模型與持久化結構。
 - Context 間不得直接匯入他域 aggregate 或 persistence document。
 
+## Parallel Routes 與 DDD 邊界
+
+- 後台主應用區可預設使用 Parallel Routes，但 slot 僅屬 UI composition。
+- Slot 不等於 Bounded Context。
+- Route group 不等於 Subdomain。
+- Page 不等於 Use Case。
+- UI layout 不可決定 Domain model。
+- 每個 named slot 應提供 `default.tsx`，避免 routing fallback 破壞 UI 體驗，但此規則不改變核心依賴方向。
+
 ## 範例
 - `RunPayroll` 可以依賴 `PayrollRepository`、`AttendanceSummaryQueryPort`，不可以直接 import Firestore SDK 或 `src/app/**`。
 
