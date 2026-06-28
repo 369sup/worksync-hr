@@ -1,45 +1,39 @@
-# worksync-hr Copilot 指引
+# Copilot Instructions for worksync-hr
 
-本專案以 DDD、Hexagonal Architecture、文件先行與最小必要複雜度為原則。先確認邊界、事實與驗證 gate，再提出或實作變更。
+本專案使用 Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui、Firebase，以及 DDD + Hexagonal Architecture。
 
-## 開始工作
+## DDD 設計流程
 
-1. 先從 `docs/README.md` 找到本次變更的 canonical docs。
-2. 先讀實際程式、設定與 workflow，區分 facts、assumptions、constraints。
-3. `docs/` 是規範來源；Mermaid、表格與規則要與擁有該決策的文件放在同一處。
-4. 若變更會影響語言、邊界、路由、權限、Firestore schema 或 rules，先更新文件再更新程式。
+Copilot 在新增功能前，必須先確認該功能屬於哪個階段：
 
-## 架構邊界
+1. Strategic Design：確認 Subdomain、Bounded Context、Ubiquitous Language、Context Map。
+2. Tactical Design：確認 Value Object、Entity、Aggregate Root、Domain Service、Domain Event、Factory、Repository。
+3. Architecture：確認 Ports、Application Use Case、Driving Adapter、Driven Adapter。
+4. Advanced Patterns：只有在需求明確時才使用 DTO/VO 區隔、CQRS、Outbox、Event Sourcing。
 
-```text
-Inbound Adapter -> Application -> Domain
-Outbound Adapter -> core-owned Port
-Firebase / external services -> Outbound Adapter
-```
+## 強制架構規則
 
-- `Domain` 只放 entity、value object、domain service、domain rule，不依賴 React、Next.js、Firebase SDK。
-- `Application` 只負責 use case orchestration、交易邊界、授權入口與 port 協調。
-- `Infrastructure` 才能實作 Firebase adapter、外部整合、document mapper 與 DTO 轉換。
-- `UI` 使用 App Router、Server Actions、Route Handlers、shadcn/ui；不得直接成為業務真相來源。
+- Domain layer 不可 import React。
+- Domain layer 不可 import Next.js。
+- Domain layer 不可 import Firebase SDK。
+- Domain layer 不可依賴 Firestore document shape。
+- Application layer 只負責 use case orchestration。
+- Application layer 只依賴 ports。
+- Infrastructure layer 實作 Firebase adapters。
+- UI layer 使用 Next.js App Router、Server Actions、Route Handlers、shadcn/ui。
+- Firebase document 與 Domain entity 必須透過 mapper 轉換。
+- 薪資、權限、稽核資料不得由 Client Component 直接寫入。
 
-## 文件與決策
+## Next.js Routing
 
-- `docs/00-project/` 管需求、詞彙與 roadmap。
-- `docs/01-architecture/` 管 bounded contexts、dependency rule、六邊形架構與 ADR。
-- `docs/02-domain/` 與 `docs/03-application/` 只保留核心規則、use case 與 port 契約，不展開框架細節。
-- `docs/04-infrastructure/` 擁有 Firebase、Firestore schema、rules 與 adapter 邊界。
-- `docs/07-security/` 擁有角色、capability、audit 與 data classification。
-- 只有必要、耐久、難逆轉的跨 Context 決策才新增 ADR。
+- 預設使用一般 App Router routes、route groups、layouts、pages。
+- 不要預設使用 Parallel Routes。
+- 只有 dashboard split view、多 panel loading/error、或多 slot 狀態明確需要時才使用 Parallel Routes。
+- 使用 Parallel Routes 時，必須補上 `default.tsx`。
 
-## 開發限制
+## 文件規則
 
-- Auth provider 只證明 identity；角色、capability、敏感寫入權限必須由 server-side trusted actor context 提供。
-- Firebase document 與 Domain entity 必須透過 mapper 轉換，不可互相充當。
-- Payroll、permissions、audit 與其他敏感資料不得由 Client Component 直接寫入。
-- 不預建 generic repository、shared business service 或未被當前需求證明需要的 abstraction。
-
-## 驗證
-
-- 使用 repo 現有的 `pnpm lint`、`pnpm typecheck`、`pnpm build` gate。
-- 只有實際執行且成功的命令可以宣稱通過；既有失敗需與本次變更分開回報。
-- 若 build 受外部字型或網路限制影響，也要明確記錄為環境限制，不把它當成已解決。
+- 文件使用繁體中文。
+- 優先使用 Mermaid 圖、表格、短條列。
+- 不要寫長篇教科書。
+- ADR 只記錄重大架構決策。

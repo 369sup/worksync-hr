@@ -1,47 +1,51 @@
-# docs
+# worksync-hr 文件入口
 
-## 目的
-- 提供 worksync-hr 的輕量 canonical docs 入口。
-- 讓需求、架構、Domain、Infrastructure、Security 與 DevOps 都有單一真相來源。
+## 文件目錄用途
+| 目錄 | 用途 |
+| --- | --- |
+| `00-project/` | 需求、詞彙、roadmap |
+| `01-architecture/` | DDD、六邊形架構、bounded contexts、ADR |
+| `02-domain/` | Domain 規則、Entity、Value Object、事件 |
+| `03-application/` | Use case、ports、application contract |
+| `04-infrastructure/` | Firebase、Firestore schema、rules、adapters |
+| `05-frontend/` | App Router 邊界、UI 規範 |
+| `06-devops/` | CI、部署、環境流程 |
+| `07-security/` | 角色、capability、audit、資料分類 |
+| `08-ai-copilot/` | Copilot 工作方式與提示 |
 
-## 圖解
-```mermaid
-flowchart TD
-  P[00-project
-需求 / 詞彙 / roadmap] --> A[01-architecture
-邊界 / ADR]
-  A --> D[02-domain
-核心規則]
-  D --> U[03-application
-use cases / ports]
-  U --> I[04-infrastructure
-Firebase / Firestore / rules]
-  I --> F[05-frontend
-App Router 邊界]
-  F --> O[06-devops
-CI / env / deployment]
-  O --> S[07-security
-roles / audit / data]
-  S --> C[08-ai-copilot
-Copilot 使用方式]
+## DDD 文件閱讀順序
+```txt
+01-architecture/ddd-design-process.md
+→ 01-architecture/strategic-design.md
+→ 01-architecture/tactical-design.md
+→ 01-architecture/hexagonal-architecture.md
+→ 01-architecture/advanced-patterns.md
+→ 02-domain/*
+→ 03-application/*
+→ 04-infrastructure/*
 ```
 
-## 閱讀順序
-- 變更需求或詞彙：先看 `00-project/requirements.md`、`00-project/glossary.md`。
-- 變更邊界、命名、依賴：先看 `01-architecture/`。
-- 變更 business rule：再看 `02-domain/` 與 `03-application/`。
-- 變更 Firebase、schema、rules：看 `04-infrastructure/` 與 `07-security/`。
-- 變更 workflow、環境、部署：看 `06-devops/`。
+## Mermaid 圖優先原則
+- 先用 Mermaid 圖說清邊界、依賴、流程，再補短條列。
+- 圖、表格、規則放在擁有該決策的 canonical doc。
+- 避免把 `docs/` 寫成長篇教科書。
 
-## 規則
-- `docs/` 是規範來源；範例、issue、PR 描述不可覆蓋此處規則。
-- 語言、邊界、路由、角色、schema、rules、Mermaid 有變更時，先更新擁有該規則的文件。
-- Mermaid 與規則放在同一份 canonical doc，不建立第二份圖表真相來源。
-- 文件維持短條列、表格與圖優先；避免把此目錄寫成教科書。
+## ADR 使用原則
+- 只記錄重大、耐久、難逆轉的跨 Context 架構決策。
+- 若只是名詞澄清、流程補充、圖更新，直接改既有文件。
+- 新增 ADR 前，先確認 `01-architecture/` 是否已有 canonical doc 可承接。
 
-## 範例
-- 新增 `overtime_requests` collection 時，同步更新 `04-infrastructure/firestore-schema.md`、`07-security/roles-permissions.md` 與對應 domain / use case 文件。
+## worksync-hr 核心 bounded contexts
+| Context | 主要責任 |
+| --- | --- |
+| `Employee` | 員工主檔、membership、capability 真相來源 |
+| `Attendance` | 出勤紀錄、工時收斂 |
+| `Leave` | 請假申請與狀態流 |
+| `Overtime` | 加班申請與核定結果 |
+| `Approval` | approver、delegate、責任分派 |
+| `Payroll` | 計薪期間、輸入收斂、薪資結果 |
+| `Audit / Security` | 稽核事件、權限治理、敏感資料保護 |
 
-## 維護注意事項
-- 重大且難逆轉的跨 Context 決策再補 `01-architecture/adr/`。
-- 若只是流程補充或規則澄清，優先更新既有 canonical docs。
+## 維護提醒
+- 變更語言、邊界、路由、權限、schema、rules 前，先更新文件。
+- `src/**` 的命名、測試、DTO/mapper 應回頭對齊這些文件。

@@ -1,29 +1,50 @@
-# 六邊形架構
+# 六邊形架構 Hexagonal Architecture
 
 ## 目的
-- 說明 UI、Application、Domain、Ports、Adapters 的責任與技術邊界。
+- 用 Ports & Adapters 保護 Application 與 Domain 核心，隔離 Next.js、Firebase、HTTP 與 UI。
 
-## 圖解
+## Mermaid 圖解
 ```mermaid
 flowchart LR
-  UI[UI / App Router] --> IN[Inbound Adapter]
-  IN --> APP[Application]
-  APP --> DOM[Domain]
-  APP --> PORTS[Core-owned Ports]
-  PORTS --> OUT[Outbound Adapters]
-  OUT --> EXT[Firebase / External Services]
+  subgraph Driving[Driving / Inbound Adapters]
+    UI[Next.js UI]
+    SA[Server Actions]
+    RH[Route Handlers]
+  end
+
+  subgraph Core[Application + Domain]
+    UC[Use Cases]
+    DOM[Domain]
+    PORTS[Ports]
+  end
+
+  subgraph Driven[Driven / Outbound Adapters]
+    FS[Firestore Repository]
+    AUTH[Firebase Auth]
+    STORAGE[Storage Adapter]
+  end
+
+  UI --> SA
+  SA --> UC
+  RH --> UC
+  UC --> DOM
+  UC --> PORTS
+  FS -. implements .-> PORTS
+  AUTH -. implements .-> PORTS
+  STORAGE -. implements .-> PORTS
 ```
 
-## 規則
-| 區域 | 責任 | 禁止 |
-| --- | --- | --- |
-| Domain | Entity、Value Object、Domain rule、狀態轉移 | React、Next.js、Firebase SDK、HTTP |
-| Application | Use case、授權入口、transaction、port 協調 | 具體 adapter、頁面元件、client state |
-| Inbound Adapter | DTO 驗證、trusted actor context、error mapping | 偷藏 business rule、直接寫 DB |
-| Outbound Adapter | Repository、query、auth、storage、mapper、技術錯誤轉譯 | 洩漏 Firebase 型別進核心 |
+## worksync-hr 套用方式
+- UI 層使用 App Router、Server Actions、Route Handlers、shadcn/ui。
+- Application layer 只負責 use case orchestration、權限入口、port 協調。
+- Infrastructure layer 才能實作 Firestore repository、Auth adapter、Storage adapter、mapper。
 
-## 範例
-- Firestore repository 是 outbound adapter；`AttendanceRecordRepository` 才是核心定義的 port。
+## 規則
+- Domain 不可知道 React、Next.js、Firebase SDK。
+- Application 只依賴 Domain 與 ports。
+- Driving Adapter 呼叫 Inbound Port；Driven Adapter 實作 Outbound Port。
+- 敏感寫入必須經 server-side trusted actor context。
 
 ## 維護注意事項
-- 新增整合時先確認是否需要新的 port；若只是現有 port 的另一種實作，不要新增多餘 abstraction。
+- 新增整合前先判斷是否需要新 port。
+- 若只是換技術供應者，不要讓 adapter 洩漏型別進核心。
