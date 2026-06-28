@@ -1,0 +1,8 @@
+* @your-github-account
+
+/docs/ @your-github-account
+/docs/02-domain/ @your-github-account
+/src/domain/ @your-github-account
+/src/application/ @your-github-account
+/firestore.rules @your-github-account
+/storage.rules @your-github-account

@@ -1,0 +1,56 @@
+name: Bug Report
+description: 回報錯誤、異常流程或安全風險。
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 問題摘要
+      description: 用 2~3 行描述問題。
+      placeholder: 在哪個流程看到什麼錯誤？
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影響區域
+      options:
+        - Employee
+        - Attendance
+        - Leave
+        - Payroll
+        - Approval
+        - Audit Log
+        - Frontend
+        - Firebase
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟
+      placeholder: |
+        1. 前往...
+        2. 點擊...
+        3. 發生...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 預期結果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 實際結果
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: 權限 / 資料風險
+      description: 若涉及薪資、權限、稽核資料，請註明。

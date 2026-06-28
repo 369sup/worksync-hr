@@ -1,0 +1,46 @@
+name: Feature Request
+description: 提出新功能、流程調整或體驗改善。
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 需求目標
+      description: 這個需求要解決什麼問題？
+    validations:
+      required: true
+  - type: dropdown
+    id: bounded_context
+    attributes:
+      label: 主要 bounded context
+      options:
+        - Employee
+        - Attendance
+        - Leave
+        - Payroll
+        - Approval
+        - Audit Log
+        - Cross Context
+    validations:
+      required: true
+  - type: textarea
+    id: user_story
+    attributes:
+      label: 使用情境
+      placeholder: 作為誰，我想要做什麼，以便得到什麼價值。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 驗收條件
+      placeholder: 用短條列列出即可。
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 架構 / Firebase / 權限影響
+      description: 請簡述是否影響 use case、collection、rules、角色權限。

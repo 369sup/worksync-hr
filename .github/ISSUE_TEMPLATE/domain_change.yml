@@ -1,0 +1,60 @@
+name: Domain Change
+description: 提出 domain model、規則或 bounded context 的調整。
+title: "[Domain] "
+labels:
+  - domain
+body:
+  - type: dropdown
+    id: bounded_context
+    attributes:
+      label: 影響的 bounded context
+      options:
+        - Employee
+        - Attendance
+        - Leave
+        - Payroll
+        - Approval
+        - Audit Log
+        - Multiple Contexts
+    validations:
+      required: true
+  - type: input
+    id: entity
+    attributes:
+      label: 影響的 entity / value object
+      placeholder: 例如 AttendanceRecord, LeaveRequest
+    validations:
+      required: true
+  - type: input
+    id: use_case
+    attributes:
+      label: 影響的 use case
+      placeholder: 例如 ClockIn, SubmitLeaveRequest
+    validations:
+      required: true
+  - type: input
+    id: collection
+    attributes:
+      label: 影響的 Firestore collection
+      placeholder: 例如 attendance_records, approval_requests
+    validations:
+      required: true
+  - type: textarea
+    id: rule_change
+    attributes:
+      label: 規則變更說明
+      description: 說明要新增、調整或移除的 business rule。
+    validations:
+      required: true
+  - type: textarea
+    id: permission_impact
+    attributes:
+      label: 權限影響
+      description: 說明 Admin、HR、Manager、Employee 哪些角色會受影響。
+    validations:
+      required: true
+  - type: textarea
+    id: docs_adr
+    attributes:
+      label: 文件 / ADR 需求
+      description: 是否需要更新 docs 或新增 ADR？
