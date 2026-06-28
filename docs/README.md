@@ -1,51 +1,54 @@
 # worksync-hr 文件入口
 
 ## 文件目錄用途
-| 目錄 | 用途 |
-| --- | --- |
-| `00-project/` | 需求、詞彙、roadmap |
-| `01-architecture/` | DDD、六邊形架構、bounded contexts、ADR |
-| `02-domain/` | Domain 規則、Entity、Value Object、事件 |
-| `03-application/` | Use case、ports、application contract |
-| `04-infrastructure/` | Firebase、Firestore schema、rules、adapters |
-| `05-frontend/` | App Router 邊界、UI 規範 |
-| `06-devops/` | CI、部署、環境流程 |
-| `07-security/` | 角色、capability、audit、資料分類 |
-| `08-ai-copilot/` | Copilot 工作方式與提示 |
+| 目錄 | 用途 | 核心文件 | 狀態 |
+| --- | --- | --- | --- |
+| `00-project/` | 需求、詞彙、roadmap | `vision.md`、`requirements.md`、`glossary.md`、`roadmap.md` | Ready |
+| `01-architecture/` | DDD、六邊形架構、bounded contexts、ADR | `overview.md`、`strategic-design.md`、`bounded-contexts.md`、`tactical-design.md`、`hexagonal-architecture.md`、`dependency-rule.md`、`advanced-patterns.md`、`adr/README.md` | Ready |
+| `02-domain/` | Domain 規則、Aggregate、VO、事件 | `employee.md`、`attendance.md`、`leave.md`、`overtime.md`、`approval.md`、`payroll.md`、`audit-log.md` | Ready |
+| `03-application/` | Use Case、ports、application contract | `use-cases.md`、`commands.md`、`queries.md`、`ports.md` | Ready |
+| `04-infrastructure/` | Firebase、Firestore schema、rules、adapters | `firebase-overview.md`、`firestore-schema.md`、`firestore-rules.md`、`storage-rules.md`、`firebase-emulator.md` | Ready |
+| `05-frontend/` | App Router 邊界、UI 規範 | `app-router.md`、`page-map.md`、`forms.md`、`shadcn-ui.md` | Ready |
+| `06-devops/` | CI、部署、環境流程 | `local-setup.md`、`env-vars.md`、`deployment.md`、`github-actions.md` | Ready |
+| `07-security/` | 角色、capability、audit、資料分類 | `roles-permissions.md`、`data-classification.md`、`audit.md` | Ready |
+| `08-ai-copilot/` | Copilot 工作方式與提示 | `copilot-usage.md`、`prompt-patterns.md`、`mcp.md` | Ready |
 
-## DDD 文件閱讀順序
+## 架構閱讀順序
 ```txt
 01-architecture/ddd-design-process.md
+→ 01-architecture/overview.md
 → 01-architecture/strategic-design.md
+→ 01-architecture/bounded-contexts.md
 → 01-architecture/tactical-design.md
 → 01-architecture/hexagonal-architecture.md
+→ 01-architecture/dependency-rule.md
 → 01-architecture/advanced-patterns.md
+→ 01-architecture/adr/README.md
 → 02-domain/*
 → 03-application/*
 → 04-infrastructure/*
+→ 05-frontend/*
+→ 06-devops/*
+→ 07-security/*
+→ 08-ai-copilot/*
 ```
 
-## Mermaid 圖優先原則
-- 先用 Mermaid 圖說清邊界、依賴、流程，再補短條列。
-- 圖、表格、規則放在擁有該決策的 canonical doc。
-- 避免把 `docs/` 寫成長篇教科書。
+## Mermaid-first 原則
+- 先用 Mermaid 圖說清邊界、流程、依賴，再補短條列。
+- 優先表格、短條列、命名規則，不寫長篇教科書。
+- canonical doc 才是規則真相來源；避免把同一規則散落多份文件。
 
 ## ADR 使用原則
-- 只記錄重大、耐久、難逆轉的跨 Context 架構決策。
-- 若只是名詞澄清、流程補充、圖更新，直接改既有文件。
-- 新增 ADR 前，先確認 `01-architecture/` 是否已有 canonical doc 可承接。
-
-## worksync-hr 核心 bounded contexts
-| Context | 主要責任 |
+| 情境 | 動作 |
 | --- | --- |
-| `Employee` | 員工主檔、membership、capability 真相來源 |
-| `Attendance` | 出勤紀錄、工時收斂 |
-| `Leave` | 請假申請與狀態流 |
-| `Overtime` | 加班申請與核定結果 |
-| `Approval` | approver、delegate、責任分派 |
-| `Payroll` | 計薪期間、輸入收斂、薪資結果 |
-| `Audit / Security` | 稽核事件、權限治理、敏感資料保護 |
+| 補流程圖、詞彙、命名規則、port 對照 | 直接改 canonical doc |
+| 調整 bounded context 關係、重要部署策略、長期架構邊界 | 評估 ADR |
+| UI slot 調整、範例補充、TODO 補註 | 直接改 canonical doc |
+| 重大、耐久、難逆轉決策 | 新增或更新 ADR |
 
-## 維護提醒
-- 變更語言、邊界、路由、權限、schema、rules 前，先更新文件。
-- `src/**` 的命名、測試、DTO/mapper 應回頭對齊這些文件。
+## 維護 TODO
+| 項目 | 說明 |
+| --- | --- |
+| Rules automated tests | 目前以文件定義原則，實際 rules test case 尚待補齊 |
+| Seed / fixture package | 目前先以文件定義建議結構，實際資料產生器待需求明確後補 |
+| Deployment runbook | 目前保留策略比較與檢查點，正式上線前需補 smoke / rollback 細節 |

@@ -1,33 +1,47 @@
 # Employee Domain
 
-## 目的
-- 定義員工主檔、membership 與 capability 的核心語意。
+## 責任範圍
+- 員工主檔。
+- membership、角色、capability、任職狀態 snapshot。
+- 提供其他 Context 所需的 identity / scope 真相來源。
 
-## 圖解
+## 不負責的事項
+- 打卡流程。
+- 請假與加班狀態機。
+- 薪資結算。
+
+## Aggregate / Entity / Value Object 候選
+| 類型 | 候選 |
+| --- | --- |
+| Aggregate | `Employee`, `Membership` |
+| Entity | `SupervisorAssignment`, `DepartmentAssignment` |
+| Value Object | `EmployeeId`, `DepartmentId`, `EmploymentStatus`, `CapabilitySet` |
+
+## 主要狀態機
 ```mermaid
-classDiagram
-  class Employee {
-    +EmployeeId id
-    +DepartmentId departmentId
-    +EmploymentStatus status
-  }
-  class Membership {
-    +UserId userId
-    +Role role
-    +Capability[] capabilities
-    +MembershipStatus status
-  }
-  Membership --> Employee
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> Active: HireEmployee
+  Active --> Suspended: SuspendMembership
+  Suspended --> Active: ReinstateMembership
+  Active --> Inactive: TerminateEmployment
+  Suspended --> Inactive: TerminateEmployment
+  Inactive --> [*]
 ```
 
-## 規則
-- `Employee` 是出勤、請假、加班、薪資流程的身分來源。
-- `Membership` 或對應 snapshot 才能回答 actor 在組織中的角色與 capability。
-- `inactive` 任職或 membership 不得執行敏感 command。
-- 角色、部門、主管與 capability 變更需留下稽核軌跡。
+## Domain Event 候選
+- `EmployeeHired`
+- `EmployeeProfileUpdated`
+- `MembershipActivated`
+- `MembershipSuspended`
+- `EmployeeTerminated`
+- `CapabilityChanged`
 
-## 範例
-- 離職員工不可再建立新的 `AttendanceRecord` 或 `LeaveRequest`。
-
-## 維護注意事項
-- 不要把 Firebase user、Firestore document 欄位或 client session 直接當成 Domain 定義。
+## 與其他 Context 的協作
+| 對象 | 協作方式 |
+| --- | --- |
+| `Attendance` | 提供可打卡身份與 employment snapshot |
+| `Leave` | 提供申請人身份、主管、額度相關 scope |
+| `Approval` | 提供 approver / delegate 解析所需 membership |
+| `Payroll` | 提供 payroll snapshot、在職狀態 |
+| `Audit / Security` | 記錄角色、capability、主管異動 |

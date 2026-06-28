@@ -1,26 +1,27 @@
 # Deployment
 
 ## 目的
-- 記錄部署方向、環境邊界與 rollback 基本要求。
+- 比較部署策略並定義基本 rollout / rollback 檢查點。
 
-## 圖解
+## 策略比較
+| 平台 | 優點 | 注意事項 |
+| --- | --- | --- |
+| Vercel | Next.js 整合成熟、preview 方便 | 仍需妥善保護 server-only env 與 Firebase admin 邊界 |
+| Firebase Hosting / App Hosting | Firebase 生態整合佳、同平台治理方便 | 需確認 Next.js App Router 支援細節與 server runtime 邊界 |
+
+## 共通部署流程
 ```mermaid
 flowchart LR
-  BUILD[Build artifact] --> VERIFY[Lint / typecheck / build]
-  VERIFY --> ENV[Validate env vars and secrets]
-  ENV --> DEPLOY[Deploy same artifact]
-  DEPLOY --> SMOKE[Smoke check]
-  SMOKE --> MONITOR[Monitor / rollback decision]
+  Verify[lint / typecheck / build] --> Env[validate env vars]
+  Env --> Deploy[deploy artifact]
+  Deploy --> Smoke[smoke checks]
+  Smoke --> Audit[verify audit / policy paths]
+  Audit --> Rollback{issue?}
+  Rollback -- yes --> Revert[rollback artifact / config]
+  Rollback -- no --> Done[done]
 ```
 
-## 規則
-- deployment 不得繞過 Application / Domain 邊界或 server-side 敏感寫入流程。
-- staging、production 應使用獨立 secrets、Firebase 設定與權限邊界。
-- rollback 需回答 artifact、rules、schema / document 相容性與敏感資料風險。
-- health、smoke 與 audit 要能區分部署失敗與業務規則失敗。
-
-## 範例
-- 若未來使用 Firebase App Hosting，仍需保留 Route Handler / Server Action 對敏感資料的 server-side 控制。
-
-## 維護注意事項
-- 實際部署流程確定後，再補更細的 runbook、health endpoint 與恢復流程。
+## 決策原則
+- 敏感寫入仍必須經 server-side use case，不因平台改變。
+- staging / production 使用獨立 secrets、Firebase project、rules 生命週期。
+- schema / rules / app deploy 順序需可回滾。

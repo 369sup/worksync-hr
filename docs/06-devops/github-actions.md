@@ -1,9 +1,9 @@
 # GitHub Actions
 
 ## 目的
-- 說明目前 CI 的最小 quality gate 與已知限制。
+- 記錄 CI 最小 gate、版本對齊與 build 失敗排查方向。
 
-## 圖解
+## CI 流程
 ```mermaid
 flowchart LR
   PR[Push / PR] --> Install[pnpm install --frozen-lockfile]
@@ -12,14 +12,23 @@ flowchart LR
   Typecheck --> Build[pnpm build]
 ```
 
-## 規則
-- CI 使用 Node.js 22 與 pnpm 11。
-- workflow 以 concurrency 避免同一 branch 的重複執行堆積。
-- 只有 repo 內已存在的 gate 才能列為必過條件；新增 gate 前先補對應 script 與文件。
-- build 失敗時先區分程式錯誤、腳本缺失與外部依賴問題。
+## CI 規格
+| 項目 | 設定 |
+| --- | --- |
+| Node.js | 22 |
+| pnpm | 11.9.0 |
+| quality gates | lint、typecheck、build |
+| concurrency | 同 branch workflow 互斥執行 |
 
-## 範例
-- 目前 `pnpm build` 可能因 `src/app/layout.tsx` 使用 `next/font/google` 抓取 Geist 字型，在受限網路環境失敗；這是已知環境限制，不能誤報為 lint / typecheck 問題。
+## build 失敗排查
+| 症狀 | 先檢查 |
+| --- | --- |
+| `next/font/google` 失敗 | 受限網路是否擋住 Geist 字型下載 |
+| env 缺失 | `.env.local` / secrets 是否缺值或命名錯誤 |
+| Firebase config 問題 | public config 與 admin config 是否混用 |
+| type error | `pnpm typecheck` 是否先失敗 |
+| lint error | `pnpm lint` 是否先失敗 |
 
-## 維護注意事項
-- 調整 workflow 指令、Node 版本或 cache 策略時，同步更新 `local-setup.md` 與 PR template 的驗證清單。
+## 注意事項
+- CI 與本地版本應對齊 Node.js 22 / pnpm 11.9.0。
+- 若本地環境啟用額外 supply-chain 防護，可能比 CI 多出 install 限制，需先處理本地 build scripts 批准問題。

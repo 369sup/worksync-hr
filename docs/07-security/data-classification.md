@@ -1,25 +1,21 @@
 # Data Classification
 
 ## 目的
-- 將資料依敏感度分級，作為 rules、UI 邊界與 audit 的基準。
+- 將資料分級，對齊 UI、rules、query、audit 的最小保護要求。
 
-## 圖解
-| 等級 | 範例 | 最低保護 |
+## 分級表
+| 等級 | 範例 | 保護要求 |
 | --- | --- | --- |
-| Public Config | Firebase 前端設定、文件導覽資訊 | 可公開，但不可夾帶權限真相 |
-| Internal | 部門名稱、一般流程設定、非敏感出勤摘要 | 需登入與最小授權 |
-| Personal | 員工姓名、聯絡方式、任職資訊 | 最小揭露、依角色與用途控制 |
-| Sensitive HR | 請假原因、補登說明、代理審批理由 | server-side 寫入、精細授權、可追溯 |
-| Payroll | 薪資、扣款、帳戶或發薪結果 | 最嚴格存取與稽核 |
-| Audit / Security | 稽核事件、權限配置、session / secret 相關資訊 | 嚴格 server-side 控制，不向 client 洩漏 |
+| Public Config | Firebase public config、公開文件導覽 | 可公開，但不可夾帶權限真相 |
+| Internal | 導覽資訊、一般流程設定、非敏感出勤摘要 | 登入 + 最小權限 |
+| Personal | 姓名、聯絡方式、任職資訊、主管關係 | 依角色與用途最小揭露 |
+| Sensitive HR | 請假原因、補登說明、代理審批理由 | server-side write、精細授權、audit |
+| Payroll | 薪資、扣款、匯款資訊、薪資匯出 | 最嚴格授權、server-only write/export |
+| Audit / Security | audit metadata、權限配置、安全事件 | append-only、server-side、嚴格讀取 |
 
-## 規則
-- Sensitive HR、Payroll、Audit / Security 資料不得由 Client Component 直接寫入。
-- 列表與 read model 預設不回傳完整敏感欄位；只有明確 capability 才能看見。
-- 分類一旦調整，需同步更新 roles、rules、schema、query model 與 audit 規則。
-
-## 範例
-- `payroll_periods.net_total`、`salary_slips.net_pay`、`leave_requests.reason`、`audit_logs.reason` 都不應直接暴露在一般列表頁。
-
-## 維護注意事項
-- 若法遵、稽核或保存期限要求提高，優先更新此文件與 `audit.md`。
+## Client Component 禁止直接寫入
+- Payroll 資料。
+- Audit / Security 資料。
+- 權限與 capability 設定。
+- 敏感個資 override 欄位。
+- Sensitive HR 理由全文與匯出檔案。

@@ -1,23 +1,34 @@
 # Firebase Emulator
 
 ## 目的
-- 提供本地開發與規則驗證方向。
+- 定義本地 emulator 開發流程、seed / test data 建議與 rules 驗證 TODO。
 
-## 圖解
+## 本地流程
 ```mermaid
 flowchart LR
-  DEV[Local App] --> EMU[Firebase Emulator Suite]
+  ENV[.env.local emulator flags] --> EMU[Firebase Emulator Suite]
   EMU --> AUTH[Auth Emulator]
   EMU --> FS[Firestore Emulator]
   EMU --> ST[Storage Emulator]
+  APP[Next.js local app] --> EMU
 ```
 
-## 規則
-- 本地測試優先使用 Emulator。
-- 規則調整後要先在 Emulator 驗證。
+## 啟動步驟
+| 步驟 | 指令 / 說明 |
+| --- | --- |
+| 安裝依賴 | `pnpm install` |
+| 啟動前端 | `pnpm dev` |
+| 啟動 emulator | `firebase emulators:start` |
+| 只啟動指定服務 | `firebase emulators:start --only auth,firestore,storage` |
 
-## 範例
-- 開發請假流程時，先用 Emulator 驗證 approval 與 rules。
+## Seed / test data 建議
+- 使用獨立 tenant / fixture 前綴，避免與手動測試資料混用。
+- fixture 至少覆蓋 `employee`、`manager`、`hr`、`payroll admin` 四種角色。
+- 針對 `leave_requests`、`attendance_records`、`payroll_periods` 建立最小 happy path + denied path 資料組。
 
-## 維護注意事項
-- 連線方式與 port 變更時同步更新本文件。
+## Rules testing TODO
+| 項目 | 建議 |
+| --- | --- |
+| Firestore rules | 補 self / team / admin matrix automated tests |
+| Storage rules | 補本人附件與 payroll export denied cases |
+| Audit flow | 驗證 denied / override 是否留下可追溯事件 |

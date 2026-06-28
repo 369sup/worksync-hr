@@ -1,26 +1,29 @@
 # Firebase Overview
 
 ## 目的
-- 概覽 Firebase 在 worksync-hr 的責任、trusted actor 流程與 adapter 邊界。
+- 說明 Firebase 在本專案的邊界位置、SDK 限制與 mapper 規則。
 
-## 圖解
+## 邊界圖
 ```mermaid
-flowchart TD
-  APP[Application Ports] --> ADP[Firebase Adapters]
-  ADP --> AUTH[Firebase Auth]
-  ADP --> FS[Firestore]
-  ADP --> ST[Storage]
-  AUTH --> ACTOR[Trusted actor context]
+flowchart LR
+  APP[Application Ports] --> INF[Firebase Infrastructure Adapters]
+  INF --> AUTH[Firebase Auth]
+  INF --> FS[Firestore]
+  INF --> ST[Storage]
+  INF --> MAP[Document / Metadata Mapper]
+  AUTH --> ACTOR[Trusted Actor Context]
 ```
 
-## 規則
-- Firebase SDK 僅存在於 adapter、rules 與必要的 server-side auth integration。
-- Firebase Auth 只證明使用者身分；角色與 capability 真相不留在 Client Component。
-- Firestore / Storage 進出都要經 mapper；document 不是 Domain entity。
-- 敏感資料與 audit 寫入需經 server-side 流程與最小權限 rules。
+## 邊界規則
+| 主題 | 規則 |
+| --- | --- |
+| Firebase SDK | 只能出現在 `src/infrastructure/**` 或明確 server-side adapter |
+| Auth | 只證明 identity，不證明 role / capability |
+| Firestore | document 不是 Domain Entity，必須先經 mapper |
+| Storage | path / metadata 不是 Domain object，必須轉成 application contract |
+| Sensitive write | 薪資、權限、稽核、敏感個資一律 server-only |
 
-## 範例
-- Firestore repository adapter 可實作 `AttendanceRecordRepository`，但 Application 只看到 port。
-
-## 維護注意事項
-- 新增 Firebase 服務前先確認是否真的需要，並同步更新 schema、rules、security 文件。
+## Mapper 規則
+- `document -> mapper -> domain/read model`。
+- `domain -> mapper -> write model/document`。
+- mapper 需處理欄位命名、null / optional、時間型別、遮罩與版本欄位。

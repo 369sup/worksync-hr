@@ -1,17 +1,30 @@
 # Copilot Usage
 
 ## 目的
-- 說明 Copilot 在本專案的使用邊界。
+- 定義 GitHub Copilot Agent 在 worksync-hr 的工作流程與禁止事項。
 
-## 圖解
-- Copilot 可協助文件、測試、重構；不得破壞 DDD 邊界。
+## 修改前必讀
+| 順序 | 文件 |
+| --- | --- |
+| 1 | `README.md` |
+| 2 | `docs/README.md` |
+| 3 | `docs/01-architecture/*` 與 `docs/01-architecture/adr/README.md` |
+| 4 | 相關 `docs/02-domain/*`、`docs/03-application/*` |
+| 5 | 涉及 Firebase / Frontend / Security 時，讀對應 `docs/04-08/*` |
+| 6 | `.github/copilot-instructions.md` 與 `.github/instructions/*` |
 
-## 規則
-- 產生程式碼前先確認所在 layer。
-- Domain 不可引入 React、Next.js、Firebase。
+## Agent 工作流程
+```mermaid
+flowchart LR
+  Read[先讀 docs / ADR / instructions] --> Boundaries[確認 context / layer / ports]
+  Boundaries --> Plan[再規劃修改]
+  Plan --> Change[做最小必要變更]
+  Change --> Validate[lint / typecheck / build]
+  Validate --> Sync[同步更新 docs]
+```
 
-## 範例
-- 產生 repository adapter 時，實作放在 infrastructure。
-
-## 維護注意事項
-- 規則以 `.github/copilot-instructions.md` 為準。
+## 禁止事項
+- 不可直接繞過 Domain。
+- 不可把 Firebase 型別放進 Domain。
+- 不可把薪資、權限、稽核寫入放在 Client Component。
+- 不可把 slot / page / route group 當成 bounded context 真相。

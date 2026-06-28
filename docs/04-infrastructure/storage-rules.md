@@ -1,17 +1,26 @@
 # Storage Rules
 
 ## 目的
-- 記錄附件與匯出檔案的存取原則。
+- 定義附件、報表、稽核匯出檔案的 path 命名與存取規則。
 
-## 圖解
-- 類型：請假附件、匯出報表、稽核附件。
+## Path 命名規範
+| 類型 | 建議 path |
+| --- | --- |
+| 請假附件 | `tenants/{tenant_id}/leave_requests/{request_id}/{file_name}` |
+| 加班附件 | `tenants/{tenant_id}/overtime_requests/{request_id}/{file_name}` |
+| 薪資匯出 | `tenants/{tenant_id}/payroll_exports/{payroll_period_id}/{file_name}` |
+| 稽核匯出 | `tenants/{tenant_id}/audit_exports/{export_id}/{file_name}` |
 
-## 規則
-- 路徑需帶入 tenant / employee / resource 資訊。
-- 薪資報表與稽核附件禁止直接由 Client Component 上傳或覆寫。
+## Rules 原則
+- path 必須帶 tenant 與 resource identifier。
+- 員工只能讀寫自己被允許的附件 path。
+- 薪資報表、稽核匯出、權限相關附件一律 server-only。
+- metadata 需標記 owner context、resource id、classification。
 
-## 範例
-- 員工可上傳自己的請假附件，但不可讀取他人附件。
-
-## 維護注意事項
-- 路徑命名與 Firestore reference 要一起維護。
+## Sensitive path 規則
+| 類型 | Client write |
+| --- | --- |
+| leave attachment | 僅限本人、且僅限非敏感附件情境 |
+| overtime attachment | 僅限本人、受規則限制 |
+| payroll export | 禁止 |
+| audit export | 禁止 |

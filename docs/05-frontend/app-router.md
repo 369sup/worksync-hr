@@ -1,213 +1,59 @@
 # App Router
 
 ## 目的
-- 定義前端路由層責任。
+- 定義 route group、Parallel Routes、named slots、`default.tsx` 與 server/client 邊界。
 
-## 圖解
+## 路由視圖
 ```mermaid
 flowchart TD
-  Layout[layout.tsx] --> SlotSummary[@summary]
-  Layout --> SlotList[@list]
-  Layout --> SlotDetail[@detail]
-  Layout --> SlotModal[@modal]
-  SlotSummary --> UI[shadcn/ui]
-  SlotList --> UI
-  SlotDetail --> UI
-  SlotModal --> UI
-  UI --> Action[Server Action / Route Handler]
-  Action --> APP[Application]
+  Root[(app)] --> Auth[(auth group)]
+  Root --> Main[(dashboard / hr / attendance / approval / payroll groups)]
+  Main --> Layout[layout.tsx]
+  Layout --> Summary[@summary]
+  Layout --> Detail[@detail]
+  Layout --> Activity[@activity]
+  Layout --> Modal[@modal]
+  Summary --> Action[Server Action / Route Handler]
+  Detail --> Action
+  Activity --> Action
+  Modal --> Action
 ```
 
-## Next.js Routing Strategy
-
-- 本專案預設使用 Next.js App Router + Parallel Routes。
-
-### 預設原則
-
-- 後台主應用區預設使用 Parallel Routes。
-- Dashboard、工作台、簽核、薪資、員工詳情、差勤檢查等多區塊頁面，優先使用 named slots。
-- 使用 `@folder` 建立 slot，例如 `@summary`、`@list`、`@detail`、`@activity`、`@modal`、`@alerts`。
-- 父層 `layout.tsx` 必須接收 slot props 並組合畫面。
-- 每個 slot 必須提供 `default.tsx`。
-- 需要 slot 內獨立 loading / error 狀態時，可在 slot 內建立 `loading.tsx` 與 `error.tsx`。
-- 需要 modal deep link 時，可搭配 Intercepting Routes。
-- 需要角色條件頁面時，可使用 Parallel Routes 依角色渲染不同 slot。
-
-### 仍可使用普通 route 的情境
-
-| 類型 | 範例 |
+## Route group 規範
+| 類型 | 建議 |
 | --- | --- |
-| Auth / public page | `/login`、`/logout`、`/forgot-password`、`/privacy`、`/terms` |
-| 系統頁 | `/unauthorized`、`/not-found` |
-| 單一步驟頁 | 單一步驟設定頁 |
-| 簡單頁 | 沒有多 panel、沒有 split view、沒有獨立 loading/error 的頁面 |
+| auth / public / one-off | 普通 routes 或 route groups |
+| 後台主應用區 | 預設 Parallel Routes |
+| 群組命名 | 使用業務語意，例如 `(dashboard)`、`(hr)`、`(payroll)` |
+| 禁止 | 不要用 route group 取代 bounded context 設計 |
 
-### 禁止事項
+## Parallel Routes 使用條件
+- 同頁需要多 panel / split view。
+- slot 需要獨立 loading / error / refresh。
+- 需要 modal deep link 或 role-based panel 組合。
+- 若只是單頁單流程，不必硬用 Parallel Routes。
 
-- 不要為了形式而建立空洞 slot。
-- 不要讓 Parallel Routes 破壞 DDD 分層。
-- 不要在 Client Component 直接讀寫薪資、權限、稽核資料。
-- 不要在 Domain layer import React、Next.js、Firebase。
-- 不要把 slot 結構當成 domain boundary；slot 是 UI composition，不是 Bounded Context。
+## named slots 命名規範
+| 規則 | 範例 |
+| --- | --- |
+| 使用小寫語意名詞 | `@summary`, `@detail`, `@queue`, `@modal` |
+| 避免位置名 | 不用 `@left`, `@right`, `@panel1` |
+| 每個 slot 必備 fallback | `default.tsx` |
 
-## 建議的 App Router Layout 範式
-
-```txt
-src/app/
-├─ (auth)/
-│  └─ login/
-│     └─ page.tsx
-├─ (dashboard)/
-│  ├─ layout.tsx
-│  ├─ page.tsx
-│  ├─ default.tsx
-│  ├─ @summary/
-│  │  ├─ default.tsx
-│  │  ├─ loading.tsx
-│  │  └─ page.tsx
-│  ├─ @alerts/
-│  │  ├─ default.tsx
-│  │  ├─ loading.tsx
-│  │  └─ page.tsx
-│  ├─ @activity/
-│  │  ├─ default.tsx
-│  │  ├─ loading.tsx
-│  │  └─ page.tsx
-│  └─ @modal/
-│     ├─ default.tsx
-│     └─ (.)employees/
-│        └─ [employeeId]/
-│           └─ page.tsx
-├─ (hr)/
-│  └─ employees/
-│     ├─ layout.tsx
-│     ├─ page.tsx
-│     ├─ default.tsx
-│     ├─ @list/
-│     │  ├─ default.tsx
-│     │  └─ page.tsx
-│     ├─ @detail/
-│     │  ├─ default.tsx
-│     │  └─ [employeeId]/
-│     │     └─ page.tsx
-│     └─ @activity/
-│        ├─ default.tsx
-│        └─ [employeeId]/
-│           └─ page.tsx
-├─ (attendance)/
-│  └─ attendance/
-│     ├─ layout.tsx
-│     ├─ page.tsx
-│     ├─ default.tsx
-│     ├─ @calendar/
-│     ├─ @records/
-│     ├─ @exceptions/
-│     └─ @detail/
-├─ (approval)/
-│  └─ approvals/
-│     ├─ layout.tsx
-│     ├─ page.tsx
-│     ├─ default.tsx
-│     ├─ @queue/
-│     ├─ @detail/
-│     └─ @history/
-└─ (payroll)/
-   └─ payroll/
-      ├─ layout.tsx
-      ├─ page.tsx
-      ├─ default.tsx
-      ├─ @runs/
-      ├─ @preview/
-      ├─ @exceptions/
-      └─ @audit/
-```
-
-## `layout.tsx` 範例
-
-```tsx
-export default function DashboardLayout({
-  children,
-  summary,
-  alerts,
-  activity,
-  modal,
-}: {
-  children: React.ReactNode
-  summary: React.ReactNode
-  alerts: React.ReactNode
-  activity: React.ReactNode
-  modal: React.ReactNode
-}) {
-  return (
-    <>
-      {modal}
-      <main>
-        <section>{summary}</section>
-        <section>{children}</section>
-        <aside>{alerts}</aside>
-        <aside>{activity}</aside>
-      </main>
-    </>
-  )
-}
-```
-
-## Parallel Routes `default.tsx` Rule
-
-每個 named slot 必須提供 `default.tsx`。
-
-原因：
-
-- refresh / hard navigation 時，Next.js 可能無法恢復不在目前 URL 中的 slot 狀態。
-- `default.tsx` 可提供 fallback。
-- 沒有 fallback 時，未匹配 slot 可能變成 404。
-
-建議：
-
+## `default.tsx` 規則
+- 每個 named slot 必須提供 `default.tsx`。
 - `@modal/default.tsx` 通常回傳 `null`。
-- 資訊型 slot 可回傳 empty state skeleton。
-- 主要內容 slot 可回傳可理解的空狀態。
+- content slot 可回傳 skeleton 或 empty state。
 
-## Slot Naming
+## Modal deep link / Intercepting Routes
+| 情境 | 建議 |
+| --- | --- |
+| 同頁開啟詳細 modal 且可分享 URL | 使用 Intercepting Routes |
+| 只是一般 dialog 狀態 | 可留在 local UI state |
+| 涉及敏感寫入 | 仍需經 server-side use case |
 
-slot 使用小寫語意名稱。
-
-建議 slot：
-
-- `@summary`
-- `@list`
-- `@detail`
-- `@activity`
-- `@alerts`
-- `@modal`
-- `@queue`
-- `@history`
-- `@calendar`
-- `@records`
-- `@exceptions`
-- `@preview`
-- `@audit`
-
-避免：
-
-- `@left`
-- `@right`
-- `@box1`
-- `@panel2`
-- `@temp`
-
-## Parallel Routes 與 DDD 邊界
-
-Parallel Routes 是 UI composition pattern，不是 DDD boundary。
-
-- Slot 不等於 Bounded Context。
-- Route group 不等於 Subdomain。
-- Page 不等於 Use Case。
-- UI layout 不可決定 Domain model。
-- Domain、Application、Infrastructure 分層仍以 DDD + Hexagonal Architecture 為準。
-
-## 範例
-- 請假表單頁面送出後呼叫 server-side use case。
-
-## 維護注意事項
-- 新頁面先標示 server/client 邊界與 slot fallback。
+## Server / Client 規則
+- 預設 Server Component。
+- Client Component 只用在互動狀態、表單控制、瀏覽器 API。
+- page 不等於 use case；slot 不等於 bounded context。
+- 不在 Client Component 直接寫薪資、權限、稽核、敏感個資。
