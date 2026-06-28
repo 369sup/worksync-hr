@@ -1,0 +1,71 @@
+name: Domain Change
+description: 提出 domain model、規則、契約或 bounded context 的調整。
+title: "[Domain] "
+labels:
+  - domain
+body:
+  - type: dropdown
+    id: bounded_context
+    attributes:
+      label: Affected bounded context
+      options:
+        - Employee
+        - Attendance
+        - Leave
+        - Overtime
+        - Payroll
+        - Approval
+        - Security / Audit
+        - Multiple Contexts
+    validations:
+      required: true
+  - type: input
+    id: layer
+    attributes:
+      label: Affected layer or contract
+      placeholder: 例如 Domain, Application, Firestore schema, Route Handler
+    validations:
+      required: true
+  - type: textarea
+    id: facts_constraints
+    attributes:
+      label: Facts and constraints
+      description: 區分已確認事實、既有限制與尚待驗證假設。
+    validations:
+      required: true
+  - type: input
+    id: entity
+    attributes:
+      label: Affected entity / value object / aggregate
+      placeholder: 例如 AttendanceRecord, LeaveRequest, ActorContext
+    validations:
+      required: true
+  - type: textarea
+    id: rule_change
+    attributes:
+      label: Rule or contract change
+      description: 說明要新增、調整或移除的 business rule、狀態轉移或公開契約。
+    validations:
+      required: true
+  - type: input
+    id: collection
+    attributes:
+      label: Related Firestore collection or published contract
+      placeholder: 例如 attendance_records, leave_requests, payroll input snapshot
+  - type: textarea
+    id: docs_adr
+    attributes:
+      label: Canonical docs / ADR impact
+      description: 需更新哪些 docs？是否需要 ADR？
+    validations:
+      required: true
+  - type: dropdown
+    id: decision_record
+    attributes:
+      label: Decision record
+      options:
+        - 不需要 ADR
+        - 需要 ADR
+        - 尚未確定
+    validations:
+      required: true

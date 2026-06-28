@@ -1,0 +1,54 @@
+name: Feature Request
+description: 提出具有明確問題、邊界與驗收條件的需求。
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and business outcome
+      description: 要解決的問題、受益角色與預期結果。
+    validations:
+      required: true
+  - type: dropdown
+    id: bounded_context
+    attributes:
+      label: Primary bounded context
+      options:
+        - Employee
+        - Attendance
+        - Leave
+        - Overtime
+        - Payroll
+        - Approval
+        - Security / Audit
+        - Cross Context
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: 描述必要行為、流程、限制與已知邊界，不指定未經驗證的技術解法。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: 列出可觀察、可驗證的驗收條件與重要失敗情境。
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: 明確列出本次不處理的角色、Context、整合或流程。
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Architecture / Firebase / security impact
+      description: 說明是否影響 use case、collection、rules、角色權限或 canonical docs。

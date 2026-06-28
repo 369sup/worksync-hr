@@ -1,0 +1,69 @@
+name: Bug Report
+description: 回報可重現的錯誤、行為偏差或安全風險。
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem summary
+      description: 用 2~3 行描述問題、受影響流程與目前觀察。
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Employee
+        - Attendance
+        - Leave
+        - Overtime
+        - Payroll
+        - Approval
+        - Security / Audit
+        - Frontend
+        - Firebase
+        - Cross Context
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction
+      placeholder: |
+        1. 前往...
+        2. 以某角色執行...
+        3. 發生...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact and scope
+      description: 受影響的角色、流程、資料、rules 或部署範圍。
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Permission / data risk
+      description: 若涉及薪資、權限、稽核、附件或敏感資料，請明確標註。
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Additional evidence
+      description: 可附上 log、截圖、失敗 command、相關 PR 或 commit。

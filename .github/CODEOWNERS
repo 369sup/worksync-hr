@@ -1,0 +1,13 @@
+# Global ownership
+* @369sup
+
+# Governance and architecture
+/.github/ @369sup
+/docs/ @369sup
+
+# Core boundaries
+/src/domain/ @369sup
+/src/application/ @369sup
+/src/infrastructure/firebase/ @369sup
+/firestore.rules @369sup
+/storage.rules @369sup
