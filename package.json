@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:content": "node scripts/check-docs.mjs",
+    "docs:mermaid": "node scripts/check-mermaid.mjs",
+    "docs:check": "pnpm docs:content && pnpm docs:mermaid",
+    "quality:check": "pnpm docs:check && pnpm lint && pnpm typecheck && pnpm build"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
