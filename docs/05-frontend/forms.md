@@ -1,27 +1,22 @@
-# Forms
+# Forms 與 Server Mutation
 
-## 目的
-- 定義表單驗證、Server Action 邊界與敏感資料寫入規則。
-
-## 表單流程
 ```mermaid
 flowchart LR
-  UI[Form UI] --> CLIENT[Client-side UX validation]
-  CLIENT --> ACTION[Server Action / Route Handler]
-  ACTION --> ACTOR[Trusted Actor Context]
-  ACTOR --> UC[Use Case]
-  UC --> RESULT[Field errors / success result]
+  FORM["Client / Server Form"] --> ADP["Server Action / Route Handler"]
+  ADP --> ID["Verify identity"]
+  ID --> ACT["Resolve ActorContext"]
+  ACT --> UC["Application Use Case"]
+  UC --> RES["Result / Field errors"]
 ```
 
-## 驗證規則
+## 責任
 | 層級 | 責任 |
 | --- | --- |
-| Client | 必填、格式、互動提示 |
-| Server Action / Route Handler | schema 驗證、actor context、錯誤轉譯 |
-| Use Case / Domain | 真正業務規則與狀態轉移 |
+| Client | UX 格式提示、互動狀態；資料不可信任 |
+| Server Action／Route Handler | schema validation、identity、tenant、capability、scope、error mapping |
+| Use Case／Domain | 業務不變條件、狀態轉移、Port orchestration |
 
-## 邊界規則
-- 表單 input 只帶 minimal fields，不帶 role / capability truth。
-- 敏感表單（薪資、權限、audit、個資 override）只能送到 server-side adapter。
-- Client Component 不可直接寫 Firestore / Storage sensitive path。
-- 表單 state 管理可以在 client，但結果決策在 server-side。
+## 規則
+- Server Actions 與 Route Handlers 都是公開端點，不因來源是 Server Component 就略過授權。
+- Form 不送可信任 tenant、Role、Capability 或 approval responsibility。
+- 敏感 Employee、Membership、Attendance correction、LeaveBalance、Approval、Payroll、Audit、export 只能走 server-side Use Case。

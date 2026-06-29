@@ -1,30 +1,24 @@
-# 進階落地模式 Advanced Patterns
+# 進階模式採用門檻
 
-## 目的
-- 只在需求明確時導入 DTO / CQRS / Outbox / Event Sourcing。
+## 目前決策
+| 模式 | 狀態 | 原因／重新評估條件 |
+| --- | --- | --- |
+| DTO／Snapshot／Read Model | 採用 | 明確隔離 adapter、Aggregate 與跨 Context Published Language |
+| 完整 CQRS | 不採用 | Query Port 已足夠；只有讀寫負載或模型明顯分離才評估 |
+| Event Sourcing | 不採用 | append-only AuditRecord 已滿足追溯；目前不需要事件重建狀態 |
+| 強制 Outbox／Message Broker | 不採用 | 先用同程序事件與冪等契約；可靠跨服務投遞需求出現後評估 |
+| Saga | 不採用 | 尚無需長時間跨服務補償的流程 |
+| Generic workflow engine | 不採用 | Leave、Overtime 各自擁有狀態；Approval 只解析責任 |
+| 中央 Business Service／Settings | 不採用 | 規則留在 owner Context，避免隱性耦合與 God Object |
 
-## 決策圖
+## Domain Event 流程
 ```mermaid
-flowchart TD
-  NEED[新需求] --> DTO{只是 adapter / app 輸入輸出整理?}
-  DTO -- yes --> DTOOK[使用 DTO，勿進 Domain]
-  DTO -- no --> CQRS{讀寫模型差異大?}
-  CQRS -- yes --> CQRSOK[評估 CQRS read model]
-  CQRS -- no --> OUTBOX{需要跨服務一致性?}
-  OUTBOX -- yes --> OUTBOXOK[評估 Outbox]
-  OUTBOX -- no --> ES{需要完整事件追溯?}
-  ES -- yes --> ESOK[評估 Event Sourcing]
-  ES -- no --> SIMPLE[維持基本 DDD + Hexagonal]
+flowchart LR
+  AGG["Aggregate"] -->|"records past-tense fact"| UC["Use Case"]
+  UC --> COMMIT["Repository commit"]
+  COMMIT --> HANDLER["In-process handler"]
+  HANDLER --> AUD["Audit / Notification / explicit consumer"]
 ```
 
-## 採用規則
-| 模式 | 何時考慮 | 不要做什麼 |
-| --- | --- | --- |
-| DTO | adapter / use case 邊界需要輸入輸出模型 | 不要把 DTO 當 VO |
-| CQRS | 查詢投影與寫模型差異很大 | 不要為了潮流預設拆讀寫 |
-| Outbox | 事件發布與資料異動需一致 | 不要先做分散式複雜方案 |
-| Event Sourcing | 法遵、薪資、稽核追溯需求高度明確 | 不要在需求未定時導入 |
-
-## 文件規則
-- 新模式採用前，先更新 canonical docs。
-- 只有重大、耐久、難逆轉決策才寫 ADR。
+- 跨 Context event 仍需 `tenantId`、`eventId`、`eventVersion`、`occurredAt` 與冪等 consumer。
+- Notification 在 commit 後執行；失敗不回滾來源業務狀態。

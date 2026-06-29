@@ -1,30 +1,29 @@
-# Audit
-
-## 目的
-- 定義必記錄事件、欄位與敏感資料存取追蹤要求。
+# Audit Policy
 
 ## 必記錄事件
-| 類型 | 例子 |
+| 類型 | 事件 |
 | --- | --- |
-| 身份 / 權限變更 | role 變更、capability grant/revoke、manager reassignment |
-| 流程 override | leave override、attendance correction override |
-| 薪資流程 | run payroll、review payroll、publish salary slips、export payroll |
-| 敏感資料讀取 | 查看薪資明細、查看 audit log、查看 sensitive HR reason |
-| 規則拒絕 / 安全事件 | denied write、unauthorized export、policy mismatch |
+| 身份與權限 | Membership、主管、Role、Capability、tenant admin 變更 |
+| 差勤與假勤 | 補登、校正、異常解除、假額度調整、override |
+| 審批 | assignment、delegation、approve、reject、escalation |
+| 薪資 | open、freeze inputs、calculate、adjust、review、reopen、publish、export |
+| 敏感存取 | Payroll／Audit／Sensitive HR read、download、export |
+| 安全 | denied、cross-tenant attempt、policy mismatch、failed audit |
 
-## Audit record 最小欄位
+## AuditRecord 最小欄位
 | 欄位 | 說明 |
 | --- | --- |
-| `actorId` | 誰觸發 |
-| `action` | 做了什麼 |
-| `targetType` / `targetId` | 作用對象 |
-| `occurredAt` | 何時發生 |
-| `result` | success / denied / failed |
-| `reason` | 必要時的簡短理由 |
-| `requestSource` | ui / api / system / batch |
+| `tenantId`, `recordId` | 隔離與唯一識別 |
+| `actorId`, `membershipId?` | 行為者與當時任職 |
+| `action`, `targetRef` | 穩定業務動作與對象 |
+| `result`, `reason?` | success／denied／failed 及必要理由 |
+| `requestId`, `requestSource` | 關聯 UI／API／system job |
+| `occurredAt` | server clock 時間 |
+| `metadata` | 經分類與遮罩的最小補充資料 |
 
-## 規則
-- audit log 只能 server-side append。
-- 不在 audit 中保存 secret、token、完整附件內容。
-- 匯出敏感資料前後都應記錄 audit event。
-- Audit 是下游 Bounded Context；Security 是跨 Context policy，兩者不得合併成單一模型。
+## 一致性與保存
+- 敏感 mutation success fact 與來源寫入應由同一 Firestore transaction／batch 提交。
+- 敏感 read、denied、failed、export 使用同步 `AuditPort`；記錄失敗時 fail closed。
+- AuditRecord 不可更新；更正以新紀錄關聯原紀錄。
+- 保存期限與 legal hold 屬法域／企業政策，確認前不硬編碼。
+- Audit 不等於 Event Sourcing，也不需要預設 Outbox。

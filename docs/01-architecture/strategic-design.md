@@ -1,46 +1,32 @@
 # 戰略設計 Strategic Design
 
-## 目的
-- 先區分業務子域、模型邊界與外部技術，再進入 tactical design。
-- 本文件是 Subdomain 分類與投入策略的唯一真相來源；Context 邊界與關係以 `bounded-contexts.md` 為準。
-
-## 基本區分
-| 概念 | 回答的問題 | 本專案用法 |
-| --- | --- | --- |
-| Subdomain | 企業需要解決哪一類業務問題 | 依競爭差異與投入優先級分為 Core、Supporting、Generic |
-| Bounded Context | 哪一套模型與語言在何處有效 | 由明確責任、資料所有權與公開契約形成模型邊界 |
-| Infrastructure | 用什麼技術實作 | Next.js、Firestore、Storage，不視為 Subdomain 或 Context |
+## Problem
+- 將完整差勤薪資範圍切成可維護的語言與資料所有權邊界，不以 route、collection 或組織部門代替 Bounded Context。
 
 ## Subdomain 分類
-| 類型 | Subdomain | 對應 Bounded Context / Provider | 分類理由 | 投入與 sourcing |
-| --- | --- | --- | --- | --- |
-| Core | 出勤管理 | `Attendance` | 出勤規則與異常處理直接影響 HR 營運正確性 | 自建 Domain Model，優先測試規則 |
-| Core | 假勤管理 | `Leave` | 額度、期間與核准結果是差勤產品核心語意 | 自建 Domain Model，優先維護一致性 |
-| Core | 薪資結算 | `Payroll` | 整合多個上游結果且具高敏感度與正確性要求 | 自建 Domain Model，最高安全與稽核要求 |
-| Supporting | 員工與任職關係 | `Employee` | 提供其他 Context 所需的在職、組織與 capability 真相 | 自建但保持簡單，避免成為共用 God Model |
-| Supporting | 審批責任解析 | `Approval` | 支援 Leave、Overtime，但不擁有其狀態機 | 自建可重用規則，不建立 generic workflow engine |
-| Supporting | 加班管理 | `Overtime` | 必要業務流程，但優先級低於差勤、假勤與薪資 | 自建最小模型，按政策逐步擴充 |
-| Supporting | 稽核追蹤 | `Audit` | HR、薪資與權限操作需要專屬追溯語意 | 自建 append-only 能力，由各 Context 發布事實 |
-| Generic | 身份驗證 | Firebase Auth（外部 Provider） | 只證明登入身份，非本產品差異化能力 | 採購／使用第三方，以 ACL 隔離 SDK 模型 |
+| 類型 | Subdomain / Context | 分類理由 | 投入策略 |
+| --- | --- | --- | --- |
+| Core | Attendance | 工作日、打卡、異常與結算正確性直接影響差勤結果 | 自建規則與高覆蓋 Domain tests |
+| Core | Leave | 假別、額度與申請狀態是差勤核心 | 自建一致性模型與版本化政策 |
+| Core | Overtime | 加班有效性與補償方式直接影響假額度及薪資 | 自建，明確隔離 Leave／Payroll |
+| Core | Payroll | 收斂多上游結果並產生高敏感計算結果 | 自建，最高安全與可追溯要求 |
+| Supporting | Employee | 提供員工主檔，不承擔組織、權限或薪資規則 | 保持小型 Aggregate |
+| Supporting | Organization | 擁有組織、任職、主管、Role、Capability 真相 | 自建 tenant-safe membership model |
+| Supporting | Schedule | 擁有 Shift 與發布後的 WorkSchedule | 自建版本化排班，不塞入 Attendance |
+| Supporting | Approval | 解析審批與代理責任，不擁有請假／加班狀態 | 明確 use case，不建通用流程引擎 |
+| Generic | Audit | 保存跨域敏感操作事實 | append-only、受控查詢與匯出 |
+| Generic | Notification | 投遞通知與保存 delivery status | Phase 5 實作；不影響業務 transaction |
+| Generic / Cross-cutting | Auth、Security、File | 通用身份 provider、授權政策與檔案能力 | Firebase provider + ACL／adapter |
 
-## 跨域政策與技術
-| 項目 | 定位 | 規則 |
+## 不建立的 Context
+| 候選 | 決策 | 原因 |
 | --- | --- | --- |
-| Security | 跨 Context 架構政策 | 由 server-side actor context、capability guard、rules 與 audit 共同落實，不建立 `Security` Context |
-| Firestore | Infrastructure | 只由 adapters 實作 persistence，不得成為 Domain Model |
-| Firebase Storage | Infrastructure | 只由 storage adapter 實作，不列為 Generic Subdomain |
-| Next.js App Router | UI / driving adapter | page、slot、route group 都不代表 Subdomain 或 Bounded Context |
+| System Settings | 不建立中央 Context | LeaveType、Shift、PayrollRule 各自屬於其 Domain；集中會形成設定 God Model |
+| Security | 作為跨 Context policy | 授權由 server adapter、ActorContext 與 capability guard 落實；Audit 保持獨立 |
+| File | 作為 Service Port／Storage adapter | 檔案沒有獨立 HR 語言或生命周期需求 |
+| UI route / slot | 不屬於 Domain | 只負責畫面 composition |
 
-## 投入原則
-- Core Domain 的規則、錯誤與測試優先於 UI 擴充。
-- Supporting Domain 只實作當前流程需要的能力，不預建通用平台。
-- Generic Domain 優先採用成熟 provider，並以 Anti-Corruption Layer 保護內部語言。
-- 調整分類必須有業務差異或 sourcing 策略改變的證據，並同步更新 ADR 與 `bounded-contexts.md`。
-
-## 決策節點
-| 問題 | 判斷方式 |
-| --- | --- |
-| 新需求屬哪個 Subdomain | 先找業務目標與競爭差異，再對應模型邊界 |
-| 需要新 Bounded Context 嗎 | 是否出現獨立語言、生命週期、資料所有權或一致性邊界 |
-| 只是外部技術嗎 | SDK、資料庫、framework 一律先視為 adapter concern |
-| 只是 UI 分頁嗎 | 查 `docs/05-frontend/app-router.md`，不可用 route 結構反推 Domain |
+## Trade-offs
+- 十個 Context 足以隔離語言與生命週期；不再為每個資料表拆 Context。
+- 採 Snapshot／Query Port 與同程序 Domain Event；只有可靠跨服務投遞需求被證明後才評估 Outbox 或 broker。
+- Query Read Model 不等於完整 CQRS；目前不拆獨立 command/query datastore。

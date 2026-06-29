@@ -1,54 +1,33 @@
 # Payroll Domain
 
-## 責任範圍
-- 計薪期間、輸入收斂、計算、發佈薪資結果。
-- 管理 payroll snapshot 與 salary slip 生命周期。
+## 邊界
+| 負責 | 不負責 |
+| --- | --- |
+| PayrollPeriod、PayrollInput、PayrollResult、PayrollAdjustment、薪資單與匯出 | 上游原始資料、銀行實際撥薪、報稅、保險申報、會計總帳 |
 
-## 不負責的事項
-- 員工角色真相。
-- 原始打卡與請假審批。
-- 前端匯出 UI 流程。
-
-## Aggregate / Entity / Value Object
+## 模型
 | 類型 | 模型 |
 | --- | --- |
-| Aggregate | `PayrollPeriod`, `SalarySlip` |
-| Entity | `PayrollLine`, `DeductionItem`, `PayrollInputSnapshot` |
-| Value Object | `PayrollStatus`, `Money`, `PayrollWindow`, `PayrollInputVersion` |
+| Aggregates | `PayrollPeriod`, `PayrollResult` |
+| Entity / VO | `PayrollInput`, `PayrollAdjustment`, `PayrollLine`, `Money`, `PayrollInputVersion` |
+| Domain Event | `PayrollPeriodOpened`, `PayrollInputsFrozen`, `PayrollCalculated`, `PayrollAdjusted`, `PayrollReviewed`, `PayrollResultsPublished` |
+| Public contract | `PayrollResultSummary`, `SalarySlipView` |
+| Ports | `PayrollPeriodRepository`, `PayrollResultRepository`, `PayrollResultQueryPort` |
 
-## 主要狀態機
+## 狀態
 ```mermaid
 stateDiagram-v2
-  [*] --> Draft
-  Draft --> CollectingInputs: StartPayrollRun
-  CollectingInputs --> Calculated: CompleteCalculation
-  Calculated --> Reviewed: ReviewPayrollRun
-  Reviewed --> Published: PublishSalarySlips
-  Calculated --> Cancelled: CancelPayrollRun
-  Reviewed --> Reopened: ReopenForFix
-  Reopened --> CollectingInputs: Recalculate
-  Published --> Locked
-  Cancelled --> [*]
-  Locked --> [*]
+  [*] --> Open
+  Open --> InputsFrozen: freeze inputs
+  InputsFrozen --> Calculated: calculate
+  Calculated --> Reviewed: review
+  Reviewed --> Published: publish
+  Calculated --> Open: reopen with reason
+  Reviewed --> Open: reopen with reason
 ```
 
-## Domain Events
-- `PayrollRunStarted`
-- `PayrollInputsCollected`
-- `PayrollCalculated`
-- `PayrollReviewed`
-- `PayrollPublished`
-- `SalarySlipGenerated`
-
-## 與其他 Context 的協作
-| 對象 | 協作方式 |
-| --- | --- |
-| `Employee` | 取得 payroll snapshot、在職狀態 |
-| `Attendance` | 讀 `FinalizedAttendanceSummary` |
-| `Leave` | 讀 `ApprovedLeaveSummary` |
-| `Overtime` | 讀 `OvertimeAdjustment` |
-| `Audit` | 透過 `AuditPort` 記錄 run、覆核、發佈、匯出 |
-
-## Repository Ports
-- `PayrollPeriodRepository`：保存計薪狀態與 `PayrollInputVersion`。
-- `SalarySlipRepository`：保存員工薪資結果；不使用模糊的 `PayrollRepository`。
+## 輸入收斂
+- 每個 PayrollInput 保存 Employee／Organization／Attendance／Leave／Overtime Published Language 的 ID 與 version。
+- 凍結後不得靜默更換上游版本；重新收斂必須 reopen、audit 並產生新 input version。
+- PayrollResult 只引用 frozen input，不取得或改寫上游 Aggregate。
+- Payroll rule 由 Payroll 擁有並版本化；法域數值在確認前保持待設定，不硬編碼。

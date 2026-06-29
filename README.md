@@ -1,9 +1,10 @@
 # worksync-hr
 
-> HR / attendance / leave / payroll 系統文件與實作骨架。
+> 多租戶 1HR 員工、組織、差勤、請假、加班與薪資系統藍圖。
 
 ## 專案定位
-- 人資主檔、差勤、請假、加班、簽核、薪資、稽核。
+- 員工主檔、組織任職、權限、班別排班、差勤、請假、加班、簽核、薪資、稽核與通知。
+- 以五個 Phase 漸進交付完整系統；完整範圍不代表一次完成。
 - 以 DDD + Hexagonal Architecture 保護核心規則與敏感資料邊界。
 - 前端使用 Next.js App Router，後端邊界以 Server Actions / Route Handlers 串接 Application Use Case。
 
@@ -59,6 +60,8 @@ docs/README.md
 - 薪資、權限、稽核資料不可由 Client Component 直接寫入。
 - Firebase document 不等於 Domain Entity，必須透過 mapper 轉換。
 - Firebase Auth 只證明 identity；角色、membership、capability 真相必須由 server-side trusted actor context 建立。
+- 所有資料與公開契約都由可信任 `TenantId` 隔離；Client 不得自報 tenant。
+- Payroll 不包含銀行實際撥薪、報稅、保險申報或會計總帳。
 
 ## 主要文件地圖
 | 目錄 | 用途 |

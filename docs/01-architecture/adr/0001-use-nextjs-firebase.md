@@ -16,7 +16,7 @@ Accepted
 ## 原因
 - Next.js 與 React 生態成熟。
 - Firebase 可快速提供 managed backend。
-- 適合中小型 HR 系統 MVP。
+- 適合以五個 Phase 漸進交付完整 HR 差勤薪資系統。
 - 可保留未來 Firebase App Hosting 選項。
 - 與 TypeScript 整合成本低。
 

@@ -1,45 +1,22 @@
-# Audit Log Capability
+# Audit Domain
 
-## 責任範圍
-- 保存重要操作、敏感讀取、override、匯出與權限變更事件。
-- 作為跨 Context 的安全與稽核能力。
+## 邊界
+| 負責 | 不負責 |
+| --- | --- |
+| append-only AuditRecord、遮罩查詢、保存與受控匯出 | 授權決策、application log、修改來源 Aggregate |
 
-## 不負責的事項
-- 取代原始 Domain aggregate。
-- 成為一般業務查詢列表的主要來源。
-- 由 Client Component 直接建立或覆寫。
-
-## Aggregate / Entity / Value Object
+## 模型
 | 類型 | 模型 |
 | --- | --- |
 | Aggregate | `AuditRecord` |
-| Entity | `AuditMetadataEntry` |
-| Value Object | `AuditAction`, `AuditResult`, `TargetRef`, `OccurredAt` |
+| Value Object | `AuditAction`, `AuditResult`, `TargetRef`, `RequestContext` |
+| Domain Event | `AuditRecordAppended` |
+| Read Model | `AuditRecordView` |
+| Ports | `AuditStorePort`, `AuditRecordQueryPort`, `AuditPort` |
 
-## 主要流程
-```mermaid
-flowchart LR
-  ACTION[Protected action or sensitive read] --> ENRICH[Attach actor / target / result]
-  ENRICH --> STORE[Append AuditRecord]
-  STORE --> REVIEW[HR / Payroll Admin / System Admin review]
-```
-
-## Domain Events
-- `AuditRecordAppended`
-- `SensitiveDataViewed`
-- `PayrollExportRequested`
-- `PermissionChanged`
-- `PolicyDenied`
-
-## 與其他 Context 的協作
-| 對象 | 協作方式 |
-| --- | --- |
-| 全部 Context | 接收事實事件或 server-side audit port 呼叫 |
-| Security Policy | 規定遮罩、保存期限與匯出限制；不是上游 Context |
-| `Payroll` | 記錄 run / publish / export |
-| `Employee` | 記錄角色、capability、manager 異動 |
-
-## 公開契約
-- `AppendAuditRecord`：各 Context 提交的最小 application command。
-- `AuditFactRecorded`：來源 Context 透過 local outbox 發布，Audit 依 `eventId` 冪等接收。
-- Audit 只 append，不提供覆寫或刪除來源事實的能力。
+## 規則
+- AuditRecord 包含 `tenantId`、`recordId`、actor、action、target、result、reason、requestId、occurredAt 與 metadata classification。
+- 只允許 server-side append；不提供 update 或一般 delete。
+- 敏感 mutation 的成功 fact 應與來源寫入在同一 Firestore transaction／batch 完成，但核心不接觸 Firebase transaction。
+- 敏感 read、denied、failed 與 export 必須記錄；token、secret、附件全文不得進 AuditRecord。
+- append-only audit 不等於 Event Sourcing，也不要求 Outbox。

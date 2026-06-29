@@ -56,4 +56,6 @@ flowchart TD
 - 預設 Server Component。
 - Client Component 只用在互動狀態、表單控制、瀏覽器 API。
 - page 不等於 use case；slot 不等於 bounded context。
-- 不在 Client Component 直接寫薪資、權限、稽核、敏感個資。
+- Server Action、Route Handler 都視為公開端點，每次驗證 identity、tenant、capability 與 resource scope。
+- 不在 Client Component 直接寫任職／權限、敏感個資、差勤校正、假額度、簽核決策、薪資、稽核或受控匯出。
+- Firebase Admin SDK 路徑不受 Security Rules 保護，必須由 Application policy 授權。

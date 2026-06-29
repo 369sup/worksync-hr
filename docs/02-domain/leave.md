@@ -1,54 +1,32 @@
 # Leave Domain
 
-## 責任範圍
-- 請假申請、額度消耗、送審、核准、駁回、取消。
-- 對外提供 approved leave result / period summary。
+## 邊界
+| 負責 | 不負責 |
+| --- | --- |
+| LeaveType、LeaveRequest、LeaveBalance、扣抵／返還／調整 | approver 真相、排班、原始 Punch、Payroll 計算 |
 
-## 不負責的事項
-- approver 真相來源。
-- 出勤原始 punch。
-- 薪資發放。
-
-## Aggregate / Entity / Value Object
+## 模型
 | 類型 | 模型 |
 | --- | --- |
-| Aggregate | `LeaveRequest`, `LeaveBalanceLedger` |
-| Entity | `LeaveDecisionRecord`, `LeaveBalanceEntry` |
-| Value Object | `LeaveType`, `LeavePeriod`, `LeaveStatus`, `LeaveReason` |
+| Aggregates | `LeaveType`, `LeaveRequest`, `LeaveBalance` |
+| Entity / VO | `LeaveBalanceEntry`, `LeavePeriod`, `LeaveUnit`, `LeaveStatus` |
+| Domain Event | `LeaveTypeRevised`, `LeaveRequestSubmitted`, `LeaveRequestApproved`, `LeaveRequestRejected`, `LeaveBalanceAdjusted`, `CompensatoryLeaveGranted` |
+| Public contract | `ApprovedLeaveSummary`, `LeaveBalanceSummary` |
+| Ports | `LeaveTypeRepository`, `LeaveRequestRepository`, `LeaveBalanceRepository`, 對應 Query Ports |
 
-## 主要狀態機
+## 狀態
 ```mermaid
 stateDiagram-v2
   [*] --> Draft
-  Draft --> PendingApproval: SubmitLeaveRequest
-  PendingApproval --> Approved: ApproveLeaveRequest
-  PendingApproval --> Rejected: RejectLeaveRequest
-  PendingApproval --> Cancelled: CancelLeaveRequest
-  Approved --> CancelledAfterApproval: CancelApprovedLeave
-  Rejected --> [*]
-  Cancelled --> [*]
-  CancelledAfterApproval --> [*]
+  Draft --> PendingApproval: submit
+  PendingApproval --> Approved: approve
+  PendingApproval --> Rejected: reject
+  Draft --> Cancelled: cancel
+  PendingApproval --> Cancelled: cancel
+  Approved --> CancelledAfterApproval: approved cancellation
 ```
 
-## Domain Events
-- `LeaveRequestSubmitted`
-- `LeaveRequestApproved`
-- `LeaveRequestRejected`
-- `LeaveRequestCancelled`
-- `LeaveBalanceConsumed`
-- `LeaveOverrideApplied`
-- `CompensatoryLeaveGranted`
-
-## 與其他 Context 的協作
-| 對象 | 協作方式 |
-| --- | --- |
-| `Employee` | 取得身份、部門、主管與額度 scope |
-| `Approval` | 解析 approver 與指派責任 |
-| `Attendance` | 輸出 `ApprovedLeaveSummary` 供出勤套用 |
-| `Payroll` | 輸出 `ApprovedLeaveSummary` |
-| `Overtime` | 冪等接收 `CompensatoryLeaveGrant`，更新 `LeaveBalanceLedger` |
-| `Audit` | 透過 `AuditPort` 或事件記錄 override、理由、敏感查閱 |
-
-## 公開契約
-- `ApprovedLeaveSummary`：只公開 Approved 申請，不包含敏感 reason。
-- `CompensatoryLeaveGrant`：依 `eventId` 冪等接收；不得直接 import `OvertimeRequest`。
+## 規則
+- LeaveType 由 Leave 擁有並以 effective period／version 演進，不放入中央 System Settings。
+- 決策前查詢 `ApprovalAssignmentResult`；Approval 不直接改寫 LeaveRequest。
+- Overtime 的 `CompensatoryLeaveGranted` 依 `tenantId + eventId` 冪等建立 balance entry。

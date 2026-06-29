@@ -14,6 +14,7 @@ Accepted
 - 使用 Firestore 儲存業務文件。
 - 使用 Storage 儲存附件與匯出檔案。
 - 敏感資料寫入流程由 server-side 控制。
+- 業務資料以 `tenants/{tenantId}/...` 邏輯分區，可信任 tenant 由 server-side ActorContext 提供。
 
 ## 原因
 - 服務整合完整。
@@ -30,4 +31,6 @@ Accepted
 - 架構需建立 Firebase adapters 與 mapper。
 - 程式碼需避免 Client Component 直接寫入薪資、權限、稽核資料。
 - Firebase rules 需對齊角色與資料分類。
+- Admin SDK 會繞過 Security Rules，server-side Use Case 必須自行驗證 tenant、capability 與 resource scope。
+- Repository／Query adapter 必須驗證 path tenant 與 document tenant，禁止跨租戶存取。
 - 文件需同步維護 schema、rules、emulator 指南。

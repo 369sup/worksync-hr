@@ -1,7 +1,7 @@
 # Copilot Instructions for worksync-hr
 
 ## Project overview
-- `worksync-hr` 是 HR / attendance / leave / payroll 導向專案。
+- `worksync-hr` 是多租戶 1HR 員工、組織、排班、差勤、請假、加班、薪資導向專案。
 - 先查 `docs/README.md`、`docs/01-architecture/` 與 ADR，再動手修改。
 
 ## Tech stack
@@ -30,12 +30,15 @@
 - Application layer 只負責 use case orchestration。
 - Repository 在核心只定義介面；Firebase 實作留在 Infrastructure。
 - UI / Route Handler / Server Action 都是 adapter，不可反向污染 Domain。
+- Server Action / Route Handler 都視為公開端點，必須逐次驗證 identity、tenant、capability、scope。
 
 ## Firebase boundary rules
 - Firebase SDK 只允許出現在 Infrastructure 或明確 Firebase 邊界。
 - Firestore document 不等於 Domain Entity。
 - Firebase document 與 Domain entity 必須透過 mapper 轉換。
 - 薪資、權限、稽核資料不得由 Client Component 直接寫入。
+- Firebase Admin SDK 會繞過 Security Rules；server-side Application policy 仍需授權。
+- `TenantId` 只可由可信任 ActorContext 取得，並貫穿所有 Port 與 Snapshot。
 
 ## Next.js App Router rules
 - 使用 Next.js App Router。
@@ -61,3 +64,7 @@
 ## Mermaid-first documentation rule
 - 能用 Mermaid 圖說清邊界、流程、依賴時，優先畫圖。
 - Mermaid code block 必須可在 GitHub Markdown 渲染。
+
+## Occam rules
+- 不預設 Event Sourcing、完整 CQRS、Message Broker、Outbox、Saga 或 generic workflow engine。
+- Domain Event 先採同程序處理；需求證明不足時再引入進階模式。

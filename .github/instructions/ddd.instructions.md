@@ -10,6 +10,8 @@ applyTo: "src/domain/**,src/application/**,docs/01-architecture/**,docs/02-domai
 - Repository 在核心中只定義介面，不實作 Firebase。
 - Application Use Case 只做流程編排。
 - 跨 Context 協作前，先確認 Ubiquitous Language 與 Context Map。
+- 所有 Aggregate、Port、Snapshot、Event 都必須維持可信任 tenant scope。
+- 不預設 generic repository、generic workflow、CQRS、Event Sourcing 或 Outbox。
 
 ## Parallel Routes 與 DDD 邊界
 

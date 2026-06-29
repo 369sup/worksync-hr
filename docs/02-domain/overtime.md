@@ -1,55 +1,31 @@
 # Overtime Domain
 
-## 責任範圍
-- 加班申請、送審、核定、補償模式、公開調整結果。
-- 對外提供補休或薪資調整結果。
+## 邊界
+| 負責 | 不負責 |
+| --- | --- |
+| 加班申請、核定、CompensationMode、發布補償結果 | 原始 Punch、approver 真相、假額度、薪資公式 |
 
-## 不負責的事項
-- 原始出勤 punch 真相。
-- approver 真相來源。
-- 薪資主檔與發薪流程。
-
-## Aggregate / Entity / Value Object
+## 模型
 | 類型 | 模型 |
 | --- | --- |
 | Aggregate | `OvertimeRequest` |
-| Entity | `CompensationDecision`, `OvertimeApprovalRecord` |
-| Value Object | `OvertimePeriod`, `CompensationMode`, `OvertimeStatus`, `OvertimeReason` |
+| Entity / VO | `CompensationDecision`, `OvertimePeriod`, `CompensationMode`, `OvertimeStatus` |
+| Domain Event | `OvertimeRequestSubmitted`, `OvertimeRequestApproved`, `OvertimeRequestRejected`, `OvertimeCompensationPublished` |
+| Public contract | `OvertimeAdjustment`, `CompensatoryLeaveGranted` integration event |
+| Ports | `OvertimeRequestRepository`, `OvertimeAdjustmentQueryPort` |
 
-## 主要狀態機
+## 狀態
 ```mermaid
 stateDiagram-v2
   [*] --> Draft
-  Draft --> PendingApproval: SubmitOvertimeRequest
-  PendingApproval --> Approved: ApproveOvertimeRequest
-  PendingApproval --> Rejected: RejectOvertimeRequest
-  PendingApproval --> Cancelled: CancelOvertimeRequest
-  Approved --> ConvertedToPayroll: PublishPayrollAdjustment
-  Approved --> ConvertedToCompLeave: PublishCompensatoryLeave
-  ConvertedToPayroll --> [*]
-  ConvertedToCompLeave --> [*]
-  Rejected --> [*]
-  Cancelled --> [*]
+  Draft --> PendingApproval: submit
+  PendingApproval --> Approved: approve with mode
+  PendingApproval --> Rejected: reject
+  Approved --> CompensationPublished: publish once
+  CompensationPublished --> [*]
 ```
 
-## Domain Events
-- `OvertimeRequestSubmitted`
-- `OvertimeRequestApproved`
-- `OvertimeRequestRejected`
-- `OvertimeRequestCancelled`
-- `OvertimeConvertedToPayroll`
-- `OvertimeConvertedToCompensatoryLeave`
-
-## 與其他 Context 的協作
-| 對象 | 協作方式 |
-| --- | --- |
-| `Employee` | 取得身份與可申請 scope |
-| `Attendance` | 取得佐證摘要，不直接共用 punch model |
-| `Approval` | approver resolution |
-| `Payroll` | 提供 `OvertimeAdjustment` |
-| `Leave` | 非同步發布 `CompensatoryLeaveGrant` |
-| `Audit` | 透過 `AuditPort` 或事件記錄補償模式與 override |
-
-## 公開契約
-- `OvertimeAdjustment`：只公開已核定且補償方式為薪資的版本化結果。
-- `CompensatoryLeaveGrant`：補償方式為補休時發布，包含唯一 `eventId`。
+## 協作
+- 以 WorkScheduleSnapshot 與 FinalizedAttendanceSummary 驗證期間，不讀取 Schedule／Attendance Aggregate。
+- `Payroll` 模式發布 `OvertimeAdjustment`；`CompensatoryLeave` 模式發布版本化事件給 Leave。
+- consumer 先採同程序處理並冪等；目前不要求 broker 或 Outbox。

@@ -1,32 +1,31 @@
-# Firebase Overview
+# Firebase 邊界
 
-## 目的
-- 說明 Firebase 在本專案的邊界位置、SDK 限制與 mapper 規則。
-
-## 邊界圖
+## 架構位置
 ```mermaid
 flowchart LR
-  APP[Application Ports] --> INF[Firebase Infrastructure Adapters]
-  INF --> AUTH[Firebase Auth]
-  INF --> FS[Firestore]
-  INF --> ST[Storage]
-  INF --> MAP[Document / Metadata Mapper]
-  AUTH --> ACL[Identity ACL]
-  ACL --> ID[AuthenticatedIdentity]
-  ID --> ACTOR[Trusted Actor Context]
+  APP["Application Ports"] --> ADP["Firebase Adapters"]
+  ADP --> AUTH["Firebase Auth"]
+  ADP --> FS["Firestore"]
+  ADP --> ST["Storage"]
+  ADP --> MAP["Document / Metadata Mappers"]
+  AUTH --> ACL["Identity ACL"]
+  ACL --> ACT["ActorContext Assembler"]
 ```
 
-## 邊界規則
-| 主題 | 規則 |
-| --- | --- |
-| Firebase SDK | 只能出現在 `src/infrastructure/**` 或明確 server-side adapter |
-| Auth | 只證明 identity，不證明 role / capability |
-| Firestore | document 不是 Domain Entity，必須先經 mapper |
-| Storage | path / metadata 不是 Domain object，必須轉成 application contract |
-| Sensitive write | 薪資、權限、稽核、敏感個資一律 server-only |
+## SDK 規則
+| SDK／能力 | 允許位置 | 核心限制 |
+| --- | --- | --- |
+| Firebase Auth Web SDK | identity driving adapter | 只產生 token／session，不提供 Role、Capability、TenantId 真相 |
+| Firebase Admin SDK | server-side Infrastructure | 會繞過 Security Rules，必須由 Use Case 驗證 tenant、capability、scope |
+| Firestore SDK | repository／query adapter | document 必須經 mapper，不得進 Domain／Application contract |
+| Storage SDK | file storage adapter | path、metadata 轉為 application reference |
 
-## Mapper 規則
-- `document -> mapper -> domain/read model`。
-- `domain -> mapper -> write model/document`。
-- mapper 需處理欄位命名、null / optional、時間型別、遮罩與版本欄位。
-- Auth adapter 必須把 Firebase User / token claims 轉成 `AuthenticatedIdentity`；SDK 型別不得進入 Application 或 Domain。
+## 多租戶規則
+- 所有 Firestore／Storage path 使用可信任 `tenants/{tenantId}/...`，tenant 不從 Client payload 直接採用。
+- Repository／Query adapter 必須比較 `ActorContext.tenantId`、path tenant 與 document tenant。
+- 跨 tenant 查詢預設禁止；system job 必須逐 tenant 執行並建立 system ActorContext。
+
+## Mapper
+- `document -> mapper -> Aggregate / Read Model`。
+- `Aggregate -> mapper -> write document`。
+- Mapper 驗證 tenant path、schema version、Timestamp、null、敏感欄位與 optimistic version。

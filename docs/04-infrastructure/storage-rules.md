@@ -1,26 +1,15 @@
-# Storage Rules
+# Firebase Storage Rules Blueprint
 
-## 目的
-- 定義附件、報表、稽核匯出檔案的 path 命名與存取規則。
+## Paths
+| 類型 | Path | Client write |
+| --- | --- | --- |
+| 請假附件 | `tenants/{tenantId}/leave_requests/{requestId}/{fileId}` | 僅經明確政策允許的本人最小上傳 |
+| 加班附件 | `tenants/{tenantId}/overtime_requests/{requestId}/{fileId}` | 僅經明確政策允許的本人最小上傳 |
+| 薪資單／匯出 | `tenants/{tenantId}/payroll_exports/{payrollPeriodId}/{fileId}` | 禁止 |
+| 稽核匯出 | `tenants/{tenantId}/audit_exports/{exportId}/{fileId}` | 禁止 |
 
-## Path 命名規範
-| 類型 | 建議 path |
-| --- | --- |
-| 請假附件 | `tenants/{tenant_id}/leave_requests/{request_id}/{file_name}` |
-| 加班附件 | `tenants/{tenant_id}/overtime_requests/{request_id}/{file_name}` |
-| 薪資匯出 | `tenants/{tenant_id}/payroll_exports/{payroll_period_id}/{file_name}` |
-| 稽核匯出 | `tenants/{tenant_id}/audit_exports/{export_id}/{file_name}` |
-
-## Rules 原則
-- path 必須帶 tenant 與 resource identifier。
-- 員工只能讀寫自己被允許的附件 path。
-- 薪資報表、稽核匯出、權限相關附件一律 server-only。
-- metadata 需標記 owner context、resource id、classification。
-
-## Sensitive path 規則
-| 類型 | Client write |
-| --- | --- |
-| leave attachment | 僅限本人、且僅限非敏感附件情境 |
-| overtime attachment | 僅限本人、受規則限制 |
-| payroll export | 禁止 |
-| audit export | 禁止 |
+## 規則
+- tenant、owner context、resource ID、classification、content type 與 size 都必須驗證。
+- 受控檔案由 server-side `FileStoragePort` 建立 reference；核心不接觸 Storage SDK、bucket 或 signed URL 型別。
+- 跨 tenant path 一律拒絕；下載 URL 必須短效、具 capability 並記錄 AuditRecord。
+- Attachment 不等於 Domain Entity；Domain 只保存必要 `FileReference`。

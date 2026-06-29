@@ -3,8 +3,8 @@
 ## 文件目錄用途
 | 目錄 | 用途 | 核心文件 | 狀態 |
 | --- | --- | --- | --- |
-| `00-project/` | 需求、詞彙、roadmap | `vision.md`、`requirements.md`、`glossary.md`、`roadmap.md` | Ready |
-| `01-architecture/` | DDD、六邊形架構、bounded contexts、放行標準、ADR | `overview.md`、`strategic-design.md`、`bounded-contexts.md`、`development-readiness.md`、`tactical-design.md`、`hexagonal-architecture.md`、`dependency-rule.md`、`advanced-patterns.md`、`adr/README.md` | Ready |
+| `00-project/` | 完整系統範圍、詞彙、五階段 roadmap | `vision.md`、`requirements.md`、`glossary.md`、`roadmap.md` | Blueprint |
+| `01-architecture/` | DDD、十個 contexts、六邊形架構、放行標準、ADR | `overview.md`、`strategic-design.md`、`bounded-contexts.md`、`development-readiness.md`、`tactical-design.md`、`hexagonal-architecture.md`、`dependency-rule.md`、`advanced-patterns.md`、`adr/README.md` | Blueprint |
 | `02-domain/` | Domain 規則、Aggregate、VO、事件 | `employee.md`、`attendance.md`、`leave.md`、`overtime.md`、`approval.md`、`payroll.md`、`audit-log.md` | Ready |
 | `03-application/` | Use Case、ports、application contract | `use-cases.md`、`commands.md`、`queries.md`、`ports.md` | Ready |
 | `04-infrastructure/` | Firebase、Firestore schema、rules、adapters | `firebase-overview.md`、`firestore-schema.md`、`firestore-rules.md`、`storage-rules.md`、`firebase-emulator.md` | Ready |
@@ -48,6 +48,8 @@
 | Ubiquitous Language | `00-project/glossary.md` |
 | Aggregate、Entity、VO、Repository Port | `01-architecture/tactical-design.md`、`02-domain/*` |
 | 開發放行 | `01-architecture/development-readiness.md` |
+| Phase 與依賴 | `00-project/roadmap.md`、`03-application/use-cases.md` |
+| Tenant 與資料保護 | `07-security/*`、`04-infrastructure/*` |
 
 ## ADR 使用原則
 | 情境 | 動作 |

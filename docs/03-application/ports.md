@@ -1,53 +1,50 @@
 # Ports 與公開契約
 
-## 目的
-- 固定 Application Core 依賴的抽象能力、owner、輸入輸出與失敗語意。
-
-## Port 分類
-| 類型 | 命名規範 | 規則 |
+## 命名與共同要求
+| 類型 | 命名 | 共同要求 |
 | --- | --- | --- |
-| Repository Port | `<AggregateRoot>Repository` | 一個 Aggregate Root 一個 persistence port |
-| Query Port | `<PublishedLanguage>QueryPort` | 回傳 immutable snapshot／summary／result |
-| Service Port | `<Capability>Port` | 封裝 audit、clock、identity、event、export 等外部能力 |
+| Repository | `<AggregateRoot>Repository` | 每個操作含可信任 tenant scope；一個 Aggregate Root 一個 port |
+| Query | `<PublishedLanguage>QueryPort` | 回傳 immutable Snapshot／Summary／Read Model |
+| Service | `<Capability>Port` | 封裝 identity、clock、audit、storage、notification 等外部能力 |
 
 ## Repository Ports
-| Owner Context | Port | Aggregate Root | 主要操作 |
-| --- | --- | --- | --- |
-| Employee | `EmployeeRepository` | `Employee` | `findById`, `save` |
-| Employee | `MembershipRepository` | `Membership` | `findActiveBySubject`, `save` |
-| Attendance | `AttendanceRecordRepository` | `AttendanceRecord` | `findByEmployeeAndWorkDate`, `save` |
-| Leave | `LeaveRequestRepository` | `LeaveRequest` | `findById`, `save` |
-| Leave | `LeaveBalanceLedgerRepository` | `LeaveBalanceLedger` | `findByEmployeeAndType`, `save` |
-| Approval | `ApprovalAssignmentRepository` | `ApprovalAssignment` | `findByTargetRef`, `save` |
-| Overtime | `OvertimeRequestRepository` | `OvertimeRequest` | `findById`, `save` |
-| Payroll | `PayrollPeriodRepository` | `PayrollPeriod` | `findById`, `save` |
-| Payroll | `SalarySlipRepository` | `SalarySlip` | `findByPeriodAndEmployee`, `saveBatch` |
+| Context | Ports |
+| --- | --- |
+| Employee | `EmployeeRepository` |
+| Organization | `OrganizationUnitRepository`, `MembershipRepository` |
+| Schedule | `ShiftRepository`, `WorkScheduleRepository` |
+| Attendance | `AttendanceRecordRepository` |
+| Leave | `LeaveTypeRepository`, `LeaveRequestRepository`, `LeaveBalanceRepository` |
+| Overtime | `OvertimeRequestRepository` |
+| Approval | `ApprovalAssignmentRepository` |
+| Payroll | `PayrollPeriodRepository`, `PayrollResultRepository` |
+| Notification | `NotificationDeliveryRepository` |
 
 ## Cross-Context Query Ports
-| Consumer | Port | Producer | Output | Failure |
-| --- | --- | --- | --- | --- |
-| Attendance、Leave、Overtime、Approval | `EmployeeProfileQueryPort` | Employee | `EmployeeProfileSnapshot` | 無有效 membership → `NOT_FOUND`／`FORBIDDEN` |
-| Payroll | `EmployeePayrollSnapshotQueryPort` | Employee | `EmployeePayrollSnapshot` | version 缺失／變更 → `CONFLICT` |
-| Leave、Overtime | `ApprovalAssignmentQueryPort` | Approval | `ApprovalAssignmentResult` | 無責任人／過期 → `CONFLICT` |
-| Payroll | `AttendanceSummaryQueryPort` | Attendance | `FinalizedAttendanceSummary` | 未 finalized → `CONFLICT` |
-| Attendance、Payroll | `ApprovedLeaveSummaryQueryPort` | Leave | `ApprovedLeaveSummary[]` | 上游 timeout → `UPSTREAM_UNAVAILABLE` |
-| Payroll | `OvertimeAdjustmentQueryPort` | Overtime | `OvertimeAdjustment[]` | 上游 timeout → `UPSTREAM_UNAVAILABLE` |
+| Consumer | Port | Producer / Output |
+| --- | --- | --- |
+| Organization | `EmployeeSnapshotQueryPort` | Employee / `EmployeeSnapshot` |
+| 全部受保護 Context | `OrganizationMembershipSnapshotQueryPort` | Organization / membership snapshot |
+| Payroll | `PayrollMembershipSnapshotQueryPort` | Organization / payroll-safe membership snapshot |
+| Attendance、Overtime | `WorkScheduleSnapshotQueryPort` | Schedule / `WorkScheduleSnapshot` |
+| Leave、Overtime | `ApprovalAssignmentQueryPort` | Approval / `ApprovalAssignmentResult` |
+| Attendance、Payroll | `ApprovedLeaveSummaryQueryPort` | Leave / approved summaries |
+| Overtime、Payroll | `AttendanceSummaryQueryPort` | Attendance / finalized summaries |
+| Payroll | `OvertimeAdjustmentQueryPort` | Overtime / adjustments |
+| UI／report | `PayrollResultQueryPort`, `AuditRecordQueryPort`, `NotificationStatusQueryPort` | scoped Read Models |
 
 ## Service Ports
-| Port | Owner / Adapter | 契約 |
-| --- | --- | --- |
-| `IdentityProviderPort` | Identity ACL / Firebase Auth adapter | token → `AuthenticatedIdentity`；不得回 Firebase User |
-| `TrustedActorContextPort` | Employee adapter | identity → `ActorContext` |
-| `AuditPort` | Audit adapter | 同步 `append(AppendAuditRecord)`；敏感 read／denied 記錄失敗即中止 |
-| `AuditStorePort` | Audit infrastructure | append-only save／scoped search；不提供 update |
-| `OutboxPort` | 各來源 Context infrastructure | 與 Aggregate 在同一 transaction 保存 `AuditFactRecorded`／integration event |
-| `IntegrationEventPort` | Infrastructure | publish versioned event；consumer 至少一次且冪等 |
-| `ClockPort` | Infrastructure | 取得 UTC instant；Domain 不直接讀系統時間 |
-| `ExportPort` | Infrastructure | 產生受控匯出 reference，不回傳 Storage SDK 型別 |
+| Port | 契約 |
+| --- | --- |
+| `IdentityProviderPort` | token/session → `AuthenticatedIdentity`，不回 Firebase User |
+| `TrustedActorContextPort` | identity + request → tenant-safe `ActorContext` |
+| `ClockPort` | UTC instant；Domain 不直接讀系統時間 |
+| `AuditPort` | append immutable fact；敏感 success fact 可參與同一 infrastructure transaction composition |
+| `FileStoragePort` | 受控附件／匯出 reference，不回 Storage SDK 型別 |
+| `NotificationGatewayPort` | 傳送 channel message；失敗回可分類錯誤 |
 
 ## 禁止事項
-- 不使用 `PayrollRepository`、`ApprovalQueryPort` 等缺少 Aggregate 或 Published Language 的模糊名稱。
-- Port 不得洩漏 Firebase SDK、Firestore document、React、Next.js request 型別。
-- UI 不得直接依賴 adapter concrete class。
-- Context 不得透過 Repository Port 讀寫他域 Aggregate。
-- Application transaction 必須把 Aggregate 與該 Context 的 outbox entry 一起提交；Audit consumer 不加入來源交易。
+- Port 不得暴露 Firebase、Firestore、Next.js、React、Request／Response 或 transaction 型別。
+- 不使用 generic repository、`PayrollRepository`、`ApprovalQueryPort`。
+- Context 不得用 Repository Port 讀寫他域 Aggregate。
+- 不預設 `OutboxPort` 或 `IntegrationEventPort`；需求證明需要可靠外部投遞時再建立。

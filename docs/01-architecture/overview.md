@@ -1,7 +1,7 @@
 # 架構總覽
 
 ## 目的
-- 快速對齊 worksync-hr 的業務邊界、層次責任、Firebase 位置與敏感資料限制。
+- 快速對齊多租戶 1HR 的十個 Context、層次責任、Firebase 位置與敏感資料限制。
 
 ## 系統視圖
 ```mermaid
@@ -28,6 +28,7 @@ Layouts / Pages / Slots]
 | Infrastructure | 實作 Firebase adapters、mapper、rules 對齊 |
 | Frontend | 預設 Server Component；Client Component 只負責互動狀態 |
 | Security | 薪資、權限、稽核、敏感個資不可由 Client Component 直接寫入 |
+| Tenant | `TenantId` 只能由 server-side ActorContext 取得並貫穿所有 Port |
 
 ## DDD 分層對應 `src` 目錄建議
 | Layer | 建議目錄 | 說明 |
@@ -42,6 +43,7 @@ Layouts / Pages / Slots]
 - `slot` 不等於 bounded context。
 - `route group` 不等於 subdomain。
 - Firestore document 不等於 Domain Entity。
+- Server Actions 與 Route Handlers 都視為公開端點；Admin SDK 不以 Security Rules 取代授權。
 
 ## 文件真相來源
 | 問題 | canonical doc |

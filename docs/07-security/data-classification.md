@@ -1,22 +1,20 @@
-# Data Classification
+# 資料分類與保護
 
-## 目的
-- 將資料分級，對齊 UI、rules、query、audit 的最小保護要求。
-
-## 分級表
-| 等級 | 範例 | 保護要求 |
+| 等級 | 範例 | 最低要求 |
 | --- | --- | --- |
-| Public Config | Firebase public config、公開文件導覽 | 可公開，但不可夾帶權限真相 |
-| Internal | 導覽資訊、一般流程設定、非敏感出勤摘要 | 登入 + 最小權限 |
-| Personal | 姓名、聯絡方式、任職資訊、主管關係 | 依角色與用途最小揭露 |
-| Sensitive HR | 請假原因、補登說明、代理審批理由 | server-side write、精細授權、audit |
-| Payroll | 薪資、扣款、匯款資訊、薪資匯出 | 最嚴格授權、server-only write/export |
-| Audit | audit metadata、操作結果、安全事件 | append-only、server-side、嚴格讀取 |
-| Security Policy | 權限配置與 actor capability | server-side 管理、最小權限、所有變更需 audit |
+| Public | 公開說明、Firebase public config | 不含 tenant／授權真相 |
+| Internal | 非敏感選項、一般組織導覽 | authenticated + tenant scope |
+| Personal | 姓名、聯絡方式、任職、排班 | 目的限制、最小欄位、server-side sensitive write |
+| Sensitive HR | 請假原因、異常、校正、代理理由 | 精細 capability、遮罩、audit |
+| Payroll | input、adjustment、result、薪資單、匯出 | server-only write、嚴格讀取、audit、短效下載 |
+| Audit | AuditRecord、政策拒絕、安全事件 | append-only、server-only、遮罩查詢 |
+| Security | Membership、Role、Capability、ActorContext | server-side 管理、每次授權、所有異動 audit |
 
-## Client Component 禁止直接寫入
-- Payroll 資料。
-- Audit 資料與 Security Policy 設定。
-- 權限與 capability 設定。
-- 敏感個資 override 欄位。
-- Sensitive HR 理由全文與匯出檔案。
+## Client Component 不得直接寫入
+- tenant、Membership、Role、Capability、敏感 Employee 欄位。
+- Attendance correction／exception、LeaveBalance、Approval decision。
+- Payroll、Audit、notification administration、受控匯出 metadata。
+
+## 多租戶
+- 每次讀寫同時驗證 actor tenant、resource tenant 與 path tenant。
+- 報表、批次與 system job 不得以全域查詢後在記憶體過濾代替 tenant-scoped query。

@@ -1,64 +1,83 @@
-# Use Cases
-
-## 目的
-- 定義全部 Context 的首批 application use case、trusted actor、輸入輸出與必要 ports。
-- 細部 HR 政策可延後，但 use case 邊界、資料所有權與跨 Context 契約不得留給實作者猜測。
+# Application Use Cases
 
 ## Trusted Actor Flow
 ```mermaid
 sequenceDiagram
-  actor User as Employee / Manager / HR / Admin
-  participant UI as Page / Form / Client UI
-  participant ADP as Server Action / Route Handler
-  participant ACL as Identity ACL
-  participant ACT as Trusted Actor Context
-  participant UC as Use Case
-  participant PORT as Ports
-
-  User->>UI: 提交最小輸入
-  UI->>ADP: input DTO
-  ADP->>ACL: verify Firebase identity
-  ACL-->>ADP: AuthenticatedIdentity
-  ADP->>ACT: resolve Membership / capabilities
-  ACT-->>ADP: ActorContext
-  ADP->>UC: input + ActorContext
-  UC->>PORT: execute through ports
+  actor User
+  participant Adapter as Server Action / Route Handler
+  participant Identity as Identity ACL
+  participant Actor as ActorContext Port
+  participant UseCase
+  participant Ports
+  User->>Adapter: minimal input
+  Adapter->>Identity: verify identity
+  Identity-->>Adapter: AuthenticatedIdentity
+  Adapter->>Actor: resolve tenant / membership / capability
+  Actor-->>Adapter: ActorContext
+  Adapter->>UseCase: ActorContext + input DTO
+  UseCase->>Ports: tenant-scoped operations
 ```
 
-## 輸入輸出規則
-| 主題 | 規則 |
-| --- | --- |
-| Input | 只含 primitive、ID、period、reason、flags；不含 Firebase SDK 型別 |
-| Output | 回傳 Published Language、result、error code、next step；不回傳 Aggregate |
-| Actor | 必帶 `actorId`、`membershipId`、`capabilities`、`scope`、`requestSource` |
-| Error | Domain / application error code 由 adapter 映射為 UI 或 HTTP response |
-| Idempotency | integration event 與敏感重試 command 必須攜帶穩定 request／event ID |
-| Audit | mutation 透過 local outbox 原子記錄；敏感讀取、拒絕與匯出透過同步 `AuditPort` 記錄 |
+## 共通 I/O
+- Input 只含 primitive、ID、期間、理由與 idempotency key；`tenantId` 不得由 Client 決定。
+- Output 只回 application DTO、Snapshot、Summary、Read Model 或 error code，不回 Aggregate／document。
+- 所有 mutation 都檢查 capability、scope、aggregate version；敏感操作寫 AuditRecord。
 
-## 全 Context 首批 Use Cases
-| Context | Use case | 主要輸入 | 主要輸出 | 主要 ports |
-| --- | --- | --- | --- | --- |
-| Employee | `HireEmployee`, `UpdateEmployeeProfile`, `SuspendMembership`, `ReinstateMembership`, `TerminateEmployment`, `GrantCapability`, `RevokeCapability` | employee／membership IDs、profile、capability、reason | employee／membership status、version | `EmployeeRepository`, `MembershipRepository`, `AuditPort` |
-| Attendance | `RecordPunch`, `RequestAttendanceCorrection`, `ApplyAttendanceCorrection`, `FinalizeAttendanceRecord` | employee、timestamp、action／correction | record ID、status、`FinalizedAttendanceSummary?` | `AttendanceRecordRepository`, `EmployeeProfileQueryPort`, `ClockPort`, `AuditPort` |
-| Leave | `SubmitLeaveRequest`, `ApproveLeaveRequest`, `RejectLeaveRequest`, `CancelLeaveRequest`, `GrantCompensatoryLeave` | employee、type、period、decision／event | request ID、status、`ApprovedLeaveSummary?` | `LeaveRequestRepository`, `LeaveBalanceLedgerRepository`, `EmployeeProfileQueryPort`, `ApprovalAssignmentQueryPort`, `AuditPort` |
-| Approval | `ResolveApprovalAssignment`, `ApplyDelegation`, `EscalateApproval`, `RecordApprovalDecision` | target ref、actor、delegate window、decision ref | `ApprovalAssignmentResult` | `ApprovalAssignmentRepository`, `EmployeeProfileQueryPort`, `ClockPort`, `AuditPort` |
-| Overtime | `SubmitOvertimeRequest`, `ApproveOvertimeRequest`, `RejectOvertimeRequest`, `CancelOvertimeRequest`, `PublishOvertimeCompensation` | employee、period、mode、decision | request ID、status、`OvertimeAdjustment?`／event | `OvertimeRequestRepository`, `AttendanceSummaryQueryPort`, `ApprovalAssignmentQueryPort`, `IntegrationEventPort`, `AuditPort` |
-| Payroll | `StartPayrollRun`, `CollectPayrollInputs`, `CalculatePayroll`, `ReviewPayroll`, `ReopenPayroll`, `PublishSalarySlips`, `CancelPayrollRun` | window、`PayrollInputVersion`、decision | payroll period ID、status、summary | `PayrollPeriodRepository`, `SalarySlipRepository`, upstream query ports, `ClockPort`, `AuditPort` |
-| Audit | `AppendAuditRecord`, `SearchAuditRecords`, `ExportAuditRecords` | audit facts／scope／filters | audit ID／masked results／export ref | `AuditStorePort`, `TrustedActorContextPort`, `ExportPort`, `ClockPort` |
-
-## 失敗契約
-| Error code | 使用時機 | Adapter 行為 |
+## Phase 1
+| Use Case | Input → Output | Ports |
 | --- | --- | --- |
-| `UNAUTHENTICATED` | 無有效 identity | 回 401／導向登入，不呼叫 use case |
-| `FORBIDDEN` | capability 或 scope 不符 | 回 403 並 append denied audit |
-| `NOT_FOUND` | aggregate 或必要 snapshot 不存在 | 回 404；不可洩漏其他 scope 資料 |
-| `CONFLICT` | 非法狀態轉移、重複打卡、版本衝突 | 回 409；保留現有狀態 |
-| `UPSTREAM_UNAVAILABLE` | 必要同步 query port timeout／失敗 | 回可重試錯誤；不得用陳舊資料靜默繼續 |
-| `VALIDATION_FAILED` | 期間、欄位或 command 不合法 | 回 400 與穩定 field errors |
-| `AUDIT_RECORDING_FAILED` | mutation 無法寫入 local outbox，或敏感 read／denied 無法同步 append | command／query 整體失敗；不得提交未留痕的敏感異動 |
+| `HireEmployee`, `UpdateEmployeeProfile`, `DeactivateEmployee` | profile／reason → `EmployeeSnapshot` | Employee repository、Audit |
+| `CreateOrganizationUnit`, `MoveOrganizationUnit` | hierarchy／effective period → unit version | Organization repository、Audit |
+| `AssignMembership`, `SuspendMembership`, `TerminateMembership` | employee／unit／employment period → membership snapshot | Employee query、Membership repository、Audit |
+| `GrantCapability`, `RevokeCapability` | membership／role／capability／reason → membership version | Membership repository、Audit |
+| `ResolveActorContext` | identity／request → `ActorContext` | Identity、Membership query、Clock、Audit on denied |
+| `RecordPunch`, `GetSelfAttendance` | timestamp／type or range → record status/read model | Membership、Schedule query、Attendance repository、Clock |
 
-## Adapter 規則
-- Server Action 適合表單 mutation；Route Handler 適合 API、webhook 與非畫面整合。
-- Adapter 必須建立 `AuthenticatedIdentity` 與 `ActorContext` 後才呼叫 use case。
-- Client Component 不可 new repository、import Firebase adapter 或提交 role／capability。
-- `GrantCompensatoryLeave` 是 integration event consumer，依 `eventId` 冪等。
+## Phase 2
+| Use Case | Input → Output | Ports |
+| --- | --- | --- |
+| `DefineShift`, `ReviseShift` | time range／break rules／effective period → shift version | Shift repository、Audit |
+| `CreateWorkSchedule`, `PublishWorkSchedule`, `ReviseWorkSchedule` | employee／range／work days → schedule snapshot | Membership query、Shift／Schedule repositories、Audit |
+| `DefineLeaveType`, `ReviseLeaveType` | unit／eligibility／effective period → leave type version | LeaveType repository、Audit |
+| `GrantLeaveBalance`, `AdjustLeaveBalance` | employee／type／amount／reason → balance summary | Membership query、LeaveBalance repository、Audit |
+| `SubmitLeaveRequest`, `CancelLeaveRequest` | type／period／reason → request status | Leave repositories、Schedule／Membership query、Audit |
+| `ResolveApprovalAssignment`, `ApplyDelegation` | target／responsibility／window → assignment result | Membership query、Approval repository、Clock、Audit |
+| `ApproveLeaveRequest`, `RejectLeaveRequest` | request／decision／expected version → approved summary/status | Approval query、Leave repositories、Audit |
+
+## Phase 3
+| Use Case | Input → Output | Ports |
+| --- | --- | --- |
+| `DetectAttendanceExceptions`, `ResolveAttendanceException` | work date／resolution → exception status | Schedule／Leave query、Attendance repository、Audit |
+| `RequestAttendanceCorrection`, `ApplyAttendanceCorrection` | punch correction／reason → record version | Attendance repository、Approval query if required、Audit |
+| `FinalizeAttendanceRecord` | work date／expected version → finalized summary | Schedule／Leave query、Attendance repository、Audit |
+| `SubmitOvertimeRequest`, `CancelOvertimeRequest` | period／reason／preferred mode → status | Membership／Schedule／Attendance query、Overtime repository、Audit |
+| `ApproveOvertimeRequest`, `RejectOvertimeRequest` | decision／mode → status | Approval query、Overtime repository、Audit |
+| `PublishOvertimeCompensation` | approved request → adjustment or comp-leave event | Overtime repository、Audit；同程序 event handler |
+
+## Phase 4
+| Use Case | Input → Output | Ports |
+| --- | --- | --- |
+| `OpenPayrollPeriod` | payroll window／currency → period ID/status | PayrollPeriod repository、Audit |
+| `CollectPayrollInputs`, `FreezePayrollInputs` | period／expected upstream versions → input version | Employee／Organization／Attendance／Leave／Overtime query ports、Payroll repositories、Audit |
+| `CalculatePayroll` | frozen input version → result summaries | Payroll repositories、Clock、Audit |
+| `AddPayrollAdjustment` | result／amount／reason／source → result version | PayrollResult repository、Audit |
+| `ReviewPayroll`, `ReopenPayrollPeriod` | period／decision／reason → status | Payroll repositories、Audit |
+| `PublishPayrollResults` | reviewed period → `SalarySlipView[]` | Payroll repositories、File Storage if export、Audit |
+
+## Phase 5
+| Use Case | Input → Output | Ports |
+| --- | --- | --- |
+| `SearchAuditRecords`, `ExportAuditRecords` | tenant scope／filters → masked views／file ref | Audit query、File Storage、Audit |
+| `GenerateAttendanceReport`, `ExportPayrollResults` | filters／version → report/file ref | scoped query ports、File Storage、Audit |
+| `DeliverNotification`, `RetryNotificationDelivery` | versioned event／delivery ID → delivery status | Notification repository／gateway、Clock |
+
+## Failure Contract
+| Code | 語意 |
+| --- | --- |
+| `UNAUTHENTICATED` | identity 無效；不呼叫 Use Case |
+| `FORBIDDEN` | tenant、capability 或 scope 不符；不得洩漏資源存在性 |
+| `NOT_FOUND` | tenant scope 內找不到必要 Aggregate／Snapshot |
+| `CONFLICT` | 版本衝突、非法狀態轉移、重複打卡、輸入未 finalized |
+| `VALIDATION_FAILED` | 欄位、期間、數值或 command 不合法 |
+| `UPSTREAM_UNAVAILABLE` | 必要 Query Port 失敗；不得以未聲明陳舊資料繼續 |
+| `AUDIT_RECORDING_FAILED` | 必記錄操作無法安全留痕；敏感流程 fail closed |

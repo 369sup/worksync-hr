@@ -1,39 +1,36 @@
-# Roles & Permissions
+# Roles、Capabilities 與 ActorContext
 
-## 目的
-- 定義 Role、Capability、敏感資料讀寫與 trusted actor 邊界。
+## 所有權
+- Organization Context 的 Membership 擁有 Role／Capability assignment 真相。
+- Security 是跨 Context policy；Firebase Auth 只證明 identity，不能直接授權 HR 行為。
+- `ActorContext` 由 server-side identity + Membership 組成；Client 不得自報 tenant、Role、Capability 或 scope。
 
-## Role vs Capability
-| 概念 | 說明 |
-| --- | --- |
-| Role | 人在組織中的職責身分，例如 `Employee`、`Manager`、`HR` |
-| Capability | 系統允許執行的具體能力，例如 `leave.approve.team`、`payroll.run` |
-| 原則 | Auth 只證明 identity；role / capability 必須由 server-side actor context 解析 |
+## 基準角色矩陣
+Role 只是 Capability 配置起點；最終授權一律檢查 capability 與 resource scope。
 
-## 權限矩陣
 | Capability | Employee | Manager | HR | Payroll Admin | System Admin |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | `attendance.record.self` | ✓ | ✓ | ✓ |  | ✓ |
-| `attendance.read.team` |  | ✓ | ✓ |  | ✓ |
+| `attendance.correct.team` |  |  | ✓ |  | ✓ |
+| `schedule.manage` |  | ✓ | ✓ |  | ✓ |
 | `leave.submit.self` | ✓ | ✓ | ✓ |  | ✓ |
 | `leave.approve.team` |  | ✓ | ✓ |  | ✓ |
-| `leave.override` |  |  | ✓ |  | ✓ |
+| `leave.balance.adjust` |  |  | ✓ |  | ✓ |
+| `overtime.submit.self` | ✓ | ✓ | ✓ |  | ✓ |
 | `overtime.approve.team` |  | ✓ | ✓ |  | ✓ |
-| `payroll.run` |  |  | ✓ | ✓ | ✓ |
-| `payroll.read.detail` |  |  | ✓ | ✓ | ✓ |
+| `payroll.run` |  |  |  | ✓ | ✓ |
+| `payroll.read.detail` |  |  |  | ✓ | ✓ |
 | `audit.read` |  |  | ✓ | ✓ | ✓ |
 | `permissions.manage` |  |  |  |  | ✓ |
 
-## 讀寫 / 匯出規則
-| 資料類型 | 可讀 | 可寫 | 可匯出 |
-| --- | --- | --- | --- |
-| 個人出勤 / 請假 | self、授權 manager、HR | server-side use case | 受 actor capability 限制 |
-| 薪資明細 | HR、Payroll Admin、System Admin | server-side only | 嚴格 capability + audit |
-| audit log | HR、Payroll Admin、System Admin | append-only server-side | 嚴格 capability + audit |
-| 權限設定 | System Admin | server-side only | 嚴格 capability + audit |
+## 授權順序
+1. 驗證 Firebase identity。
+2. 解析有效 tenant Membership。
+3. 建立 `ActorContext`。
+4. 驗證 capability、self/team/tenant scope、target tenant 與 aggregate state。
+5. 執行 Use Case 並記錄必要 AuditRecord。
 
 ## 禁止事項
-- Employee 不可自我核准。
-- Client Component 不可直接寫入薪資、權限、稽核、敏感個資。
-- 沒有明確 capability 的操作一律拒絕。
-- Security 是跨 Context policy；role 與 capability 真相由 Employee 的 Membership 擁有，不建立 Security Context。
+- Employee 不可自我核准；Delegate 必須在有效 assignment window 內。
+- 任何未明確允許的跨 tenant、跨 scope、敏感欄位操作一律拒絕。
+- UI 隱藏按鈕、Firebase custom claim 或 route group 都不是最終授權。

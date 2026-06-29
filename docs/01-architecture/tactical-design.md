@@ -1,63 +1,29 @@
 # 戰術設計 Tactical Design
 
-## 目的
-- 將 strategic design 收斂成 Aggregate、Entity、Value Object、Domain Event 與 Repository Port。
+## 基本規則
+- Entity 以 identity 判斷同一性；Value Object 不可變且以值判斷相等。
+- Aggregate 是 transaction consistency boundary，只能由 Aggregate Root 對外變更。
+- Repository Port 一個 Aggregate Root 一個，不建立 generic repository。
+- 每個 Aggregate、Snapshot、Domain Event 都包含或可推導可信任 `TenantId`。
 
-## Tactical building blocks
-```mermaid
-classDiagram
-  class AggregateRoot
-  class Entity
-  class ValueObject
-  class DomainService
-  class DomainEvent
-  class Factory
-  class RepositoryPort {
-    <<interface>>
-  }
-
-  AggregateRoot *-- Entity
-  AggregateRoot *-- ValueObject
-  AggregateRoot --> DomainEvent
-  DomainService --> AggregateRoot
-  Factory --> AggregateRoot
-  RepositoryPort --> AggregateRoot
-```
-
-## `src` 對應建議
-| 概念 | 建議目錄 | 備註 |
-| --- | --- | --- |
-| Aggregate / Entity / VO | `src/domain/<context>/` | 純業務規則，不含 Firebase / Next.js |
-| Command / Query contract | `src/application/<context>/` | 可含 application DTO，但不是 document shape |
-| Repository Port | `src/application/<context>/ports/` | Application 擁有持久化需求；Domain 不依賴 port 或 adapter |
-| Mapper / Adapter | `src/infrastructure/firebase/<context>/` | document ↔ domain / read model |
-
-## 已確認模型速查
+## 模型速查
 | Context | Aggregate Root | Entity / Value Object |
 | --- | --- | --- |
-| Employee | `Employee`、`Membership` | `EmploymentStatus`、`CapabilitySet` |
-| Attendance | `AttendanceRecord` | `Punch`、`WorkDate`、`CorrectionReason` |
-| Leave | `LeaveRequest`、`LeaveBalanceLedger` | `LeaveDecisionRecord`、`LeavePeriod`、`LeaveType` |
-| Overtime | `OvertimeRequest` | `OvertimePeriod`、`CompensationMode` |
-| Approval | `ApprovalAssignment` | `ApproverScope`、`DelegateWindow` |
-| Payroll | `PayrollPeriod`、`SalarySlip` | `PayrollLine`、`Money`、`PayrollInputVersion` |
-| Audit | `AuditRecord` | `AuditAction`、`AuditResult` |
+| Employee | `Employee` | `EmployeeId`, `EmployeeStatus`, `PersonalProfile` |
+| Organization | `OrganizationUnit`, `Membership` | `Role`, `Capability`, `EmploymentPeriod`, `ReportingLine` |
+| Schedule | `Shift`, `WorkSchedule` | `WorkDay`, `ShiftTimeRange`, `ScheduleVersion` |
+| Attendance | `AttendanceRecord` | `Punch`, `AttendanceException`, `WorkDate`, `CorrectionReason` |
+| Leave | `LeaveType`, `LeaveRequest`, `LeaveBalance` | `LeavePeriod`, `LeaveBalanceEntry`, `LeaveUnit` |
+| Overtime | `OvertimeRequest` | `CompensationMode`, `OvertimePeriod`, `CompensationDecision` |
+| Approval | `ApprovalAssignment` | `Approver`, `Delegate`, `ApprovalTargetRef`, `DelegateWindow` |
+| Payroll | `PayrollPeriod`, `PayrollResult` | `PayrollInput`, `PayrollAdjustment`, `PayrollLine`, `Money` |
+| Audit | `AuditRecord` | `AuditAction`, `AuditResult`, `TargetRef` |
+| Notification | `NotificationDelivery` | `Recipient`, `NotificationChannel`, `DeliveryAttempt` |
 
-## Repository Ports
-| Aggregate Root | Repository Port |
-| --- | --- |
-| `Employee` | `EmployeeRepository` |
-| `Membership` | `MembershipRepository` |
-| `AttendanceRecord` | `AttendanceRecordRepository` |
-| `LeaveRequest` | `LeaveRequestRepository` |
-| `LeaveBalanceLedger` | `LeaveBalanceLedgerRepository` |
-| `ApprovalAssignment` | `ApprovalAssignmentRepository` |
-| `OvertimeRequest` | `OvertimeRequestRepository` |
-| `PayrollPeriod` | `PayrollPeriodRepository` |
-| `SalarySlip` | `SalarySlipRepository` |
-| `AuditRecord` | append-only `AuditPort`，不提供一般 update repository |
+Payroll 的 Repository Ports 為 `PayrollPeriodRepository`、`PayrollResultRepository`；凍結輸入版本使用 `PayrollInputVersion`。
 
-## 不可犯錯
-- 不要把 Firestore document shape 當成 Aggregate。
-- 不要讓 Client Component 決定狀態轉移。
-- 不要把跨 Context 查詢邏輯塞進 Domain Entity。
+## 跨 Aggregate 規則
+- 同 Context 不同 Aggregate 以 ID 參照，Application Use Case 負責編排。
+- 跨 Context 只傳 Snapshot、Summary 或 versioned event，不傳 Entity reference。
+- 需要同一 Firestore transaction 的敏感業務寫入與 Audit fact，由 infrastructure transaction composition 實作；核心不接觸 Firebase transaction。
+- 目前 Domain Event 在同程序記錄與派送；可靠跨服務投遞被證明需要前不採 Outbox。

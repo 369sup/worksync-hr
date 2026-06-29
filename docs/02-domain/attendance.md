@@ -1,48 +1,30 @@
 # Attendance Domain
 
-## 責任範圍
-- 打卡、工作日出勤紀錄、異常、校正、結算。
-- 對外提供 finalized attendance result / summary。
+## 邊界
+| 負責 | 不負責 |
+| --- | --- |
+| Punch、AttendanceRecord、AttendanceException、校正、結算 | 定義 Shift／WorkSchedule、請假審批、加班補償、薪資計算 |
 
-## 不負責的事項
-- 員工角色真相。
-- 請假審批。
-- 最終薪資結果。
-
-## Aggregate / Entity / Value Object
+## 模型
 | 類型 | 模型 |
 | --- | --- |
-| Aggregate | `AttendanceRecord` |
-| Entity | `Punch`, `AttendanceAnomaly` |
-| Value Object | `WorkDate`, `WorkInterval`, `CorrectionReason`, `AttendanceStatus` |
+| Aggregate | `AttendanceRecord`（tenant + employee + work date） |
+| Entity / VO | `Punch`, `AttendanceException`, `WorkDate`, `WorkInterval`, `CorrectionReason` |
+| Domain Event | `PunchRecorded`, `AttendanceExceptionDetected`, `AttendanceCorrected`, `AttendanceFinalized` |
+| Public contract | `FinalizedAttendanceSummary` |
+| Ports | `AttendanceRecordRepository`, `AttendanceSummaryQueryPort` |
 
-## 主要狀態機
+## 狀態
 ```mermaid
 stateDiagram-v2
-  [*] --> Open: FirstPunch
-  Open --> Correcting: RequestCorrection
-  Correcting --> Open: AcceptCorrection
-  Open --> Finalized: FinalizeAttendanceRecord
-  Correcting --> Finalized: FinalizeAttendanceRecord
-  Finalized --> LockedForPayroll: LockByPayrollSnapshot
-  LockedForPayroll --> [*]
+  [*] --> Open
+  Open --> ExceptionPending: detect exception
+  ExceptionPending --> Open: resolve or correct
+  Open --> Finalized: finalize
+  Finalized --> [*]
 ```
 
-## Domain Events
-- `AttendanceClockedIn`
-- `AttendanceClockedOut`
-- `AttendanceCorrectionRequested`
-- `AttendanceCorrected`
-- `AttendanceFinalized`
-- `AttendanceLockedForPayroll`
-
-## 與其他 Context 的協作
-| 對象 | 協作方式 |
-| --- | --- |
-| `Employee` | 讀取有效員工與排班 / scope snapshot |
-| `Leave` | 套用 approved leave result 以消除異常或計算摘要 |
-| `Payroll` | 輸出 `FinalizedAttendanceSummary`，不回寫 payroll 狀態 |
-| `Audit` | 透過 `AuditPort` 或事件記錄補登、覆寫、敏感檢視 |
-
-## 公開契約
-- `FinalizedAttendanceSummary`：只由 Finalized 紀錄建立；包含版本，供 Payroll 使用。
+## 協作
+- 讀取 Organization membership、Schedule snapshot 與 approved leave summary，不共用其 Aggregate。
+- Payroll／Overtime 只能消費 Finalized 且具版本的 summary。
+- correction、override、finalize 必須 server-side 並 audit。
