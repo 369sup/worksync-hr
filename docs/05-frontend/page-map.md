@@ -25,7 +25,7 @@ flowchart TD
 | `/approvals` | Approval | Manager / HR / Admin | 可搭配 `@queue` + `@history` |
 | `/overtime` | Overtime | Employee / Manager / HR | 可搭配 `@list` + `@detail` |
 | `/payroll` | Payroll | Payroll Admin / HR / Admin | 高敏感，server-side gate |
-| `/audit` | Audit / Security | HR / Payroll Admin / System Admin | 高敏感，禁止 client direct write |
+| `/audit` | Audit | HR / Payroll Admin / System Admin | 高敏感，禁止 client direct write；Security policy 適用所有 routes |
 
 ## 警示
 - page 只代表入口，不代表單一 use case。

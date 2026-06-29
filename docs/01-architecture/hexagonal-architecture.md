@@ -40,7 +40,7 @@ flowchart LR
 ## Port 分類
 | 類型 | 目的 | 範例 |
 | --- | --- | --- |
-| Inbound | 進入核心的 use case contract | `SubmitLeaveRequest`, `RunPayroll` |
+| Inbound | 進入核心的 use case contract | `SubmitLeaveRequest`, `StartPayrollRun` |
 | Repository Port | Aggregate 持久化抽象 | `LeaveRequestRepository` |
 | Query Port | 公開 snapshot / read model | `AttendanceSummaryQueryPort` |
 | Service Port | 時鐘、actor、audit、storage | `TrustedActorContextPort`, `AuditPort` |

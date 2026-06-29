@@ -9,12 +9,12 @@
 - 原始打卡與請假審批。
 - 前端匯出 UI 流程。
 
-## Aggregate / Entity / Value Object 候選
-| 類型 | 候選 |
+## Aggregate / Entity / Value Object
+| 類型 | 模型 |
 | --- | --- |
 | Aggregate | `PayrollPeriod`, `SalarySlip` |
 | Entity | `PayrollLine`, `DeductionItem`, `PayrollInputSnapshot` |
-| Value Object | `PayrollStatus`, `Money`, `PayrollWindow`, `InputVersion` |
+| Value Object | `PayrollStatus`, `Money`, `PayrollWindow`, `PayrollInputVersion` |
 
 ## 主要狀態機
 ```mermaid
@@ -32,7 +32,7 @@ stateDiagram-v2
   Locked --> [*]
 ```
 
-## Domain Event 候選
+## Domain Events
 - `PayrollRunStarted`
 - `PayrollInputsCollected`
 - `PayrollCalculated`
@@ -44,7 +44,11 @@ stateDiagram-v2
 | 對象 | 協作方式 |
 | --- | --- |
 | `Employee` | 取得 payroll snapshot、在職狀態 |
-| `Attendance` | 讀 finalized attendance summary |
-| `Leave` | 讀 approved leave adjustment |
-| `Overtime` | 讀 approved overtime adjustment |
-| `Audit / Security` | 記錄 run、覆核、發佈、匯出 |
+| `Attendance` | 讀 `FinalizedAttendanceSummary` |
+| `Leave` | 讀 `ApprovedLeaveSummary` |
+| `Overtime` | 讀 `OvertimeAdjustment` |
+| `Audit` | 透過 `AuditPort` 記錄 run、覆核、發佈、匯出 |
+
+## Repository Ports
+- `PayrollPeriodRepository`：保存計薪狀態與 `PayrollInputVersion`。
+- `SalarySlipRepository`：保存員工薪資結果；不使用模糊的 `PayrollRepository`。

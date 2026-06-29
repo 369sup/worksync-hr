@@ -4,7 +4,7 @@
 | 目錄 | 用途 | 核心文件 | 狀態 |
 | --- | --- | --- | --- |
 | `00-project/` | 需求、詞彙、roadmap | `vision.md`、`requirements.md`、`glossary.md`、`roadmap.md` | Ready |
-| `01-architecture/` | DDD、六邊形架構、bounded contexts、ADR | `overview.md`、`strategic-design.md`、`bounded-contexts.md`、`tactical-design.md`、`hexagonal-architecture.md`、`dependency-rule.md`、`advanced-patterns.md`、`adr/README.md` | Ready |
+| `01-architecture/` | DDD、六邊形架構、bounded contexts、放行標準、ADR | `overview.md`、`strategic-design.md`、`bounded-contexts.md`、`development-readiness.md`、`tactical-design.md`、`hexagonal-architecture.md`、`dependency-rule.md`、`advanced-patterns.md`、`adr/README.md` | Ready |
 | `02-domain/` | Domain 規則、Aggregate、VO、事件 | `employee.md`、`attendance.md`、`leave.md`、`overtime.md`、`approval.md`、`payroll.md`、`audit-log.md` | Ready |
 | `03-application/` | Use Case、ports、application contract | `use-cases.md`、`commands.md`、`queries.md`、`ports.md` | Ready |
 | `04-infrastructure/` | Firebase、Firestore schema、rules、adapters | `firebase-overview.md`、`firestore-schema.md`、`firestore-rules.md`、`storage-rules.md`、`firebase-emulator.md` | Ready |
@@ -19,6 +19,7 @@
 → 01-architecture/overview.md
 → 01-architecture/strategic-design.md
 → 01-architecture/bounded-contexts.md
+→ 01-architecture/development-readiness.md
 → 01-architecture/tactical-design.md
 → 01-architecture/hexagonal-architecture.md
 → 01-architecture/dependency-rule.md
@@ -37,6 +38,16 @@
 - 先用 Mermaid 圖說清邊界、流程、依賴，再補短條列。
 - 優先表格、短條列、命名規則，不寫長篇教科書。
 - canonical doc 才是規則真相來源；避免把同一規則散落多份文件。
+- 修改 Mermaid 後執行 `pnpm docs:check`，並在支援 Mermaid 的 renderer 抽查修改圖。
+
+## Canonical 文件所有權
+| 問題 | 唯一真相來源 |
+| --- | --- |
+| Subdomain 分類與投入 | `01-architecture/strategic-design.md` |
+| Context 邊界、Context Map、Published Language | `01-architecture/bounded-contexts.md` |
+| Ubiquitous Language | `00-project/glossary.md` |
+| Aggregate、Entity、VO、Repository Port | `01-architecture/tactical-design.md`、`02-domain/*` |
+| 開發放行 | `01-architecture/development-readiness.md` |
 
 ## ADR 使用原則
 | 情境 | 動作 |

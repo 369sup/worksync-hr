@@ -29,10 +29,10 @@ jobs:
         with:
           version: 11.9.0
 
-      - name: Setup Node.js 22
+      - name: Setup Node.js 24.18.0
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.18.0
           cache: pnpm
 
       - name: Install dependencies
@@ -40,6 +40,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Documentation
+        run: pnpm docs:check
 
       - name: Typecheck
         run: pnpm typecheck

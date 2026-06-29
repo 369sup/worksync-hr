@@ -9,8 +9,8 @@
 - 請假審批。
 - 最終薪資結果。
 
-## Aggregate / Entity / Value Object 候選
-| 類型 | 候選 |
+## Aggregate / Entity / Value Object
+| 類型 | 模型 |
 | --- | --- |
 | Aggregate | `AttendanceRecord` |
 | Entity | `Punch`, `AttendanceAnomaly` |
@@ -28,7 +28,7 @@ stateDiagram-v2
   LockedForPayroll --> [*]
 ```
 
-## Domain Event 候選
+## Domain Events
 - `AttendanceClockedIn`
 - `AttendanceClockedOut`
 - `AttendanceCorrectionRequested`
@@ -41,5 +41,8 @@ stateDiagram-v2
 | --- | --- |
 | `Employee` | 讀取有效員工與排班 / scope snapshot |
 | `Leave` | 套用 approved leave result 以消除異常或計算摘要 |
-| `Payroll` | 輸出 finalized summary，不回寫 payroll 狀態 |
-| `Audit / Security` | 記錄補登、覆寫、敏感檢視事件 |
+| `Payroll` | 輸出 `FinalizedAttendanceSummary`，不回寫 payroll 狀態 |
+| `Audit` | 透過 `AuditPort` 或事件記錄補登、覆寫、敏感檢視 |
+
+## 公開契約
+- `FinalizedAttendanceSummary`：只由 Finalized 紀錄建立；包含版本，供 Payroll 使用。

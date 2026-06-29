@@ -11,7 +11,9 @@ flowchart LR
   INF --> FS[Firestore]
   INF --> ST[Storage]
   INF --> MAP[Document / Metadata Mapper]
-  AUTH --> ACTOR[Trusted Actor Context]
+  AUTH --> ACL[Identity ACL]
+  ACL --> ID[AuthenticatedIdentity]
+  ID --> ACTOR[Trusted Actor Context]
 ```
 
 ## 邊界規則
@@ -27,3 +29,4 @@ flowchart LR
 - `document -> mapper -> domain/read model`。
 - `domain -> mapper -> write model/document`。
 - mapper 需處理欄位命名、null / optional、時間型別、遮罩與版本欄位。
+- Auth adapter 必須把 Firebase User / token claims 轉成 `AuthenticatedIdentity`；SDK 型別不得進入 Application 或 Domain。

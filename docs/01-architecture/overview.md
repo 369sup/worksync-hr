@@ -48,7 +48,9 @@ Layouts / Pages / Slots]
 | --- | --- |
 | Context 邊界 | `bounded-contexts.md` |
 | 分層與 ports | `hexagonal-architecture.md`、`dependency-rule.md` |
-| Aggregate / VO 候選 | `tactical-design.md`、`docs/02-domain/*` |
+| Aggregate / VO | `tactical-design.md`、`docs/02-domain/*` |
+| Subdomain 分類 | `strategic-design.md` |
+| Context Map／公開契約 | `bounded-contexts.md` |
 | Firebase schema / rules | `docs/04-infrastructure/*` |
 | UI routing / slots | `docs/05-frontend/app-router.md` |
 | 權限 / 資料分級 / audit | `docs/07-security/*` |

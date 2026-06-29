@@ -9,8 +9,8 @@
 - approver 真相來源。
 - 薪資主檔與發薪流程。
 
-## Aggregate / Entity / Value Object 候選
-| 類型 | 候選 |
+## Aggregate / Entity / Value Object
+| 類型 | 模型 |
 | --- | --- |
 | Aggregate | `OvertimeRequest` |
 | Entity | `CompensationDecision`, `OvertimeApprovalRecord` |
@@ -32,7 +32,7 @@ stateDiagram-v2
   Cancelled --> [*]
 ```
 
-## Domain Event 候選
+## Domain Events
 - `OvertimeRequestSubmitted`
 - `OvertimeRequestApproved`
 - `OvertimeRequestRejected`
@@ -46,6 +46,10 @@ stateDiagram-v2
 | `Employee` | 取得身份與可申請 scope |
 | `Attendance` | 取得佐證摘要，不直接共用 punch model |
 | `Approval` | approver resolution |
-| `Payroll` | 提供薪資調整結果 |
-| `Leave` | 提供補休來源結果 |
-| `Audit / Security` | 記錄補償模式與 override |
+| `Payroll` | 提供 `OvertimeAdjustment` |
+| `Leave` | 非同步發布 `CompensatoryLeaveGrant` |
+| `Audit` | 透過 `AuditPort` 或事件記錄補償模式與 override |
+
+## 公開契約
+- `OvertimeAdjustment`：只公開已核定且補償方式為薪資的版本化結果。
+- `CompensatoryLeaveGrant`：補償方式為補休時發布，包含唯一 `eventId`。

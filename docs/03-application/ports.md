@@ -1,31 +1,53 @@
-# Ports
+# Ports 與公開契約
 
 ## 目的
-- 定義核心依賴的抽象能力與命名規範。
+- 固定 Application Core 依賴的抽象能力、owner、輸入輸出與失敗語意。
 
 ## Port 分類
-| 類型 | 命名規範 | 例子 |
+| 類型 | 命名規範 | 規則 |
 | --- | --- | --- |
-| Repository Port | `<Aggregate>NameRepository` | `LeaveRequestRepository` |
-| Query Port | `<ReadModel>NameQueryPort` 或 `<Context><Snapshot>QueryPort` | `EmployeeProfileQueryPort` |
-| Service Port | `<Capability>NamePort` | `AuditPort`, `ClockPort`, `TrustedActorContextPort` |
+| Repository Port | `<AggregateRoot>Repository` | 一個 Aggregate Root 一個 persistence port |
+| Query Port | `<PublishedLanguage>QueryPort` | 回傳 immutable snapshot／summary／result |
+| Service Port | `<Capability>Port` | 封裝 audit、clock、identity、event、export 等外部能力 |
 
-## 命名規則
-- 以業務能力命名，不以 Firestore、HTTP、Next.js、page 命名。
-- Repository Port 擁有 aggregate persistence 語意。
-- Query Port 回傳 snapshot / summary / read model，不回傳 aggregate 可變狀態。
-- Service Port 封裝時間、稽核、身份、匯出、檔案等外部能力。
-
-## Use Case 與 Ports 對照
-| Use case | Repository Port | Query Port | Service Port |
+## Repository Ports
+| Owner Context | Port | Aggregate Root | 主要操作 |
 | --- | --- | --- | --- |
-| `RecordPunch` | `AttendanceRecordRepository` | `EmployeeProfileQueryPort` | `ClockPort`, `AuditPort` |
-| `SubmitLeaveRequest` | `LeaveRequestRepository` | `EmployeeProfileQueryPort`, `ApprovalQueryPort` | `AuditPort` |
-| `ApproveLeaveRequest` | `LeaveRequestRepository` | `ApprovalQueryPort` | `AuditPort` |
-| `SubmitOvertimeRequest` | `OvertimeRequestRepository` | `AttendanceSummaryQueryPort`, `ApprovalQueryPort` | `AuditPort` |
-| `RunPayroll` | `PayrollRepository` | `AttendanceSummaryQueryPort`, `LeaveAdjustmentQueryPort`, `OvertimeAdjustmentQueryPort`, `EmployeePayrollSnapshotQueryPort` | `AuditPort`, `ClockPort` |
+| Employee | `EmployeeRepository` | `Employee` | `findById`, `save` |
+| Employee | `MembershipRepository` | `Membership` | `findActiveBySubject`, `save` |
+| Attendance | `AttendanceRecordRepository` | `AttendanceRecord` | `findByEmployeeAndWorkDate`, `save` |
+| Leave | `LeaveRequestRepository` | `LeaveRequest` | `findById`, `save` |
+| Leave | `LeaveBalanceLedgerRepository` | `LeaveBalanceLedger` | `findByEmployeeAndType`, `save` |
+| Approval | `ApprovalAssignmentRepository` | `ApprovalAssignment` | `findByTargetRef`, `save` |
+| Overtime | `OvertimeRequestRepository` | `OvertimeRequest` | `findById`, `save` |
+| Payroll | `PayrollPeriodRepository` | `PayrollPeriod` | `findById`, `save` |
+| Payroll | `SalarySlipRepository` | `SalarySlip` | `findByPeriodAndEmployee`, `saveBatch` |
+
+## Cross-Context Query Ports
+| Consumer | Port | Producer | Output | Failure |
+| --- | --- | --- | --- | --- |
+| Attendance、Leave、Overtime、Approval | `EmployeeProfileQueryPort` | Employee | `EmployeeProfileSnapshot` | 無有效 membership → `NOT_FOUND`／`FORBIDDEN` |
+| Payroll | `EmployeePayrollSnapshotQueryPort` | Employee | `EmployeePayrollSnapshot` | version 缺失／變更 → `CONFLICT` |
+| Leave、Overtime | `ApprovalAssignmentQueryPort` | Approval | `ApprovalAssignmentResult` | 無責任人／過期 → `CONFLICT` |
+| Payroll | `AttendanceSummaryQueryPort` | Attendance | `FinalizedAttendanceSummary` | 未 finalized → `CONFLICT` |
+| Attendance、Payroll | `ApprovedLeaveSummaryQueryPort` | Leave | `ApprovedLeaveSummary[]` | 上游 timeout → `UPSTREAM_UNAVAILABLE` |
+| Payroll | `OvertimeAdjustmentQueryPort` | Overtime | `OvertimeAdjustment[]` | 上游 timeout → `UPSTREAM_UNAVAILABLE` |
+
+## Service Ports
+| Port | Owner / Adapter | 契約 |
+| --- | --- | --- |
+| `IdentityProviderPort` | Identity ACL / Firebase Auth adapter | token → `AuthenticatedIdentity`；不得回 Firebase User |
+| `TrustedActorContextPort` | Employee adapter | identity → `ActorContext` |
+| `AuditPort` | Audit adapter | 同步 `append(AppendAuditRecord)`；敏感 read／denied 記錄失敗即中止 |
+| `AuditStorePort` | Audit infrastructure | append-only save／scoped search；不提供 update |
+| `OutboxPort` | 各來源 Context infrastructure | 與 Aggregate 在同一 transaction 保存 `AuditFactRecorded`／integration event |
+| `IntegrationEventPort` | Infrastructure | publish versioned event；consumer 至少一次且冪等 |
+| `ClockPort` | Infrastructure | 取得 UTC instant；Domain 不直接讀系統時間 |
+| `ExportPort` | Infrastructure | 產生受控匯出 reference，不回傳 Storage SDK 型別 |
 
 ## 禁止事項
-- 不要命名成 `FirestoreLeaveRepositoryPort`。
-- 不要讓 port 泄漏 Firebase SDK 型別。
-- 不要讓 UI 直接依賴 adapter concrete class。
+- 不使用 `PayrollRepository`、`ApprovalQueryPort` 等缺少 Aggregate 或 Published Language 的模糊名稱。
+- Port 不得洩漏 Firebase SDK、Firestore document、React、Next.js request 型別。
+- UI 不得直接依賴 adapter concrete class。
+- Context 不得透過 Repository Port 讀寫他域 Aggregate。
+- Application transaction 必須把 Aggregate 與該 Context 的 outbox entry 一起提交；Audit consumer 不加入來源交易。

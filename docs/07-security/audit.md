@@ -27,3 +27,4 @@
 - audit log 只能 server-side append。
 - 不在 audit 中保存 secret、token、完整附件內容。
 - 匯出敏感資料前後都應記錄 audit event。
+- Audit 是下游 Bounded Context；Security 是跨 Context policy，兩者不得合併成單一模型。

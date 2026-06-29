@@ -6,7 +6,7 @@
 ## 命名規範
 | 規則 | 說明 |
 | --- | --- |
-| 動詞以 `Get` / `List` / `Search` / `Resolve` 開頭 | `GetEmployeeProfile`, `ListPendingApprovals` |
+| 動詞以 `Get` / `List` / `Search` / `Resolve` 開頭 | `GetEmployeeProfileSnapshot`, `ListPendingApprovals` |
 | 以 read model 命名 | 不用 `FetchFirestoreLeaveDocs` |
 | 明示 scope | `ListTeamLeaveRequests`, `GetSelfAttendanceSummary` |
 | 敏感查詢明確標示 | `GetPayrollDetail`, `ExportAuditLogsPreview` |
@@ -18,6 +18,16 @@
 | Team view | 主管看授權範圍 | `ListPendingApprovals` |
 | Admin / HR view | 敏感細節檢視 | `GetPayrollRunDetail` |
 | Projection / report | 聚合多 Context read model | `GetDashboardSummary` |
+
+## Published Language Queries
+| Query | Output | Owner |
+| --- | --- | --- |
+| `GetEmployeeProfileSnapshot` | `EmployeeProfileSnapshot` | Employee |
+| `GetEmployeePayrollSnapshot` | `EmployeePayrollSnapshot` | Employee |
+| `ResolveApprovalAssignment` | `ApprovalAssignmentResult` | Approval |
+| `ListApprovedLeaveSummaries` | `ApprovedLeaveSummary[]` | Leave |
+| `GetFinalizedAttendanceSummary` | `FinalizedAttendanceSummary` | Attendance |
+| `ListOvertimeAdjustments` | `OvertimeAdjustment[]` | Overtime |
 
 ## 回傳規則
 - 預設回傳最小必要欄位。

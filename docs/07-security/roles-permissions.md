@@ -36,3 +36,4 @@
 - Employee 不可自我核准。
 - Client Component 不可直接寫入薪資、權限、稽核、敏感個資。
 - 沒有明確 capability 的操作一律拒絕。
+- Security 是跨 Context policy；role 與 capability 真相由 Employee 的 Membership 擁有，不建立 Security Context。

@@ -9,8 +9,8 @@
 - 成為一般業務查詢列表的主要來源。
 - 由 Client Component 直接建立或覆寫。
 
-## Aggregate / Entity / Value Object 候選
-| 類型 | 候選 |
+## Aggregate / Entity / Value Object
+| 類型 | 模型 |
 | --- | --- |
 | Aggregate | `AuditRecord` |
 | Entity | `AuditMetadataEntry` |
@@ -24,7 +24,7 @@ flowchart LR
   STORE --> REVIEW[HR / Payroll Admin / System Admin review]
 ```
 
-## Domain Event 候選
+## Domain Events
 - `AuditRecordAppended`
 - `SensitiveDataViewed`
 - `PayrollExportRequested`
@@ -35,6 +35,11 @@ flowchart LR
 | 對象 | 協作方式 |
 | --- | --- |
 | 全部 Context | 接收事實事件或 server-side audit port 呼叫 |
-| `Security` | 套用遮罩、保存期限、匯出限制 |
+| Security Policy | 規定遮罩、保存期限與匯出限制；不是上游 Context |
 | `Payroll` | 記錄 run / publish / export |
 | `Employee` | 記錄角色、capability、manager 異動 |
+
+## 公開契約
+- `AppendAuditRecord`：各 Context 提交的最小 application command。
+- `AuditFactRecorded`：來源 Context 透過 local outbox 發布，Audit 依 `eventId` 冪等接收。
+- Audit 只 append，不提供覆寫或刪除來源事實的能力。

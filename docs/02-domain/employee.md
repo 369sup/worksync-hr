@@ -10,8 +10,8 @@
 - 請假與加班狀態機。
 - 薪資結算。
 
-## Aggregate / Entity / Value Object 候選
-| 類型 | 候選 |
+## Aggregate / Entity / Value Object
+| 類型 | 模型 |
 | --- | --- |
 | Aggregate | `Employee`, `Membership` |
 | Entity | `SupervisorAssignment`, `DepartmentAssignment` |
@@ -29,7 +29,7 @@ stateDiagram-v2
   Inactive --> [*]
 ```
 
-## Domain Event 候選
+## Domain Events
 - `EmployeeHired`
 - `EmployeeProfileUpdated`
 - `MembershipActivated`
@@ -44,4 +44,8 @@ stateDiagram-v2
 | `Leave` | 提供申請人身份、主管、額度相關 scope |
 | `Approval` | 提供 approver / delegate 解析所需 membership |
 | `Payroll` | 提供 payroll snapshot、在職狀態 |
-| `Audit / Security` | 記錄角色、capability、主管異動 |
+| `Audit` | 透過 `AuditPort` 或事件記錄角色、capability、主管異動 |
+
+## 公開契約
+- `EmployeeProfileSnapshot`：Attendance、Leave、Overtime、Approval 使用的版本化任職快照。
+- `EmployeePayrollSnapshot`：Payroll 使用的版本化在職與計薪 scope 快照。

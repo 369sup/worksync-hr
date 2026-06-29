@@ -9,8 +9,8 @@
 - 薪資與出勤結算。
 - 員工主檔真相來源。
 
-## Aggregate / Entity / Value Object 候選
-| 類型 | 候選 |
+## Aggregate / Entity / Value Object
+| 類型 | 模型 |
 | --- | --- |
 | Aggregate | `ApprovalAssignment` |
 | Entity | `DelegationRule`, `ApprovalStep` |
@@ -29,7 +29,7 @@ stateDiagram-v2
   Completed --> [*]
 ```
 
-## Domain Event 候選
+## Domain Events
 - `ApproverResolved`
 - `ApprovalAssigned`
 - `ApprovalDelegated`
@@ -42,4 +42,7 @@ stateDiagram-v2
 | `Employee` | 取得角色、主管、scope |
 | `Leave` | 回傳誰該審，不直接改 leave status |
 | `Overtime` | 回傳誰該審，不直接改 overtime status |
-| `Audit / Security` | 記錄代理、升級、override 路徑 |
+| `Audit` | 透過 `AuditPort` 或事件記錄代理、升級、override 路徑 |
+
+## 公開契約
+- `ApprovalAssignmentResult`：只提供 assignment、approver、delegate、狀態與有效期，不公開可變 Aggregate。
