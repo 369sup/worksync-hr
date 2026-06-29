@@ -14,3 +14,6 @@ applyTo: "docs/**,.github/prompts/**,.github/skills/**,.github/agents/**"
 - 文件必須明確區分 UI composition 與 DDD boundary；slot、route group、page 都不是 bounded context。
 - 完整系統依五個 Phase 描述，不以 MVP 作為主要規劃語意。
 - Context、Aggregate、Snapshot、Port、Use Case 名稱必須與 glossary 一致。
+- 任務未要求時，不修改 `src/**`、不新增套件、workflow 或架構。
+- LINE Bot 暫時只做通知，不得描述為 command／mutation adapter。
+- 後台預設 App Router + Parallel Routes，UI 預設 shadcn/ui；slot／page／route group／component variant 都不是 Domain boundary。

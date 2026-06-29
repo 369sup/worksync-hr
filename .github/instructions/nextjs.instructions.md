@@ -44,8 +44,11 @@ applyTo: "src/app/**,src/components/**,docs/05-frontend/**"
 - 預設 Server Component。
 - Client Component 只用於互動狀態、表單、瀏覽器 API。
 - UI 優先使用 shadcn/ui。
+- shadcn/ui component／variant 命名不得成為 Domain 真相來源。
 - 簡單 auth / public / one-off page 可使用普通 route groups、layouts、pages。
 - Route Handler 與 Server Action 負責輸入驗證、actor context、錯誤轉譯。
+- LINE Bot 暫時只做通知，不得由 UI route 延伸為 command／mutation 入口。
+- 任務未要求時，不修改 `src/**`、不新增套件、workflow 或架構。
 
 ## 建議的 App Router Layout 範式
 

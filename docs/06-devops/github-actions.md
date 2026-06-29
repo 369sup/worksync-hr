@@ -7,7 +7,8 @@
 ```mermaid
 flowchart LR
   PR[Push / PR] --> Install[pnpm install --frozen-lockfile]
-  Install --> Lint[pnpm lint]
+  Install --> Docs[pnpm docs:check]
+  Docs --> Lint[pnpm lint]
   Lint --> Typecheck[pnpm typecheck]
   Typecheck --> Build[pnpm build]
 ```
@@ -15,9 +16,9 @@ flowchart LR
 ## CI 規格
 | 項目 | 設定 |
 | --- | --- |
-| Node.js | 22 |
+| Node.js | 24.18.0 |
 | pnpm | 11.9.0 |
-| quality gates | lint、typecheck、build |
+| quality gates | `pnpm docs:check` → `pnpm lint` → `pnpm typecheck` → `pnpm build` |
 | concurrency | 同 branch workflow 互斥執行 |
 
 ## build 失敗排查
@@ -30,5 +31,5 @@ flowchart LR
 | lint error | `pnpm lint` 是否先失敗 |
 
 ## 注意事項
-- CI 與本地版本應對齊 Node.js 22 / pnpm 11.9.0。
+- CI 與本地版本應對齊 Node.js 24.18.0 / pnpm 11.9.0。
 - 若本地環境啟用額外 supply-chain 防護，可能比 CI 多出 install 限制，需先處理本地 build scripts 批准問題。

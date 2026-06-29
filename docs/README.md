@@ -5,9 +5,9 @@
 | --- | --- | --- | --- |
 | `00-project/` | 完整系統範圍、詞彙、五階段 roadmap | `vision.md`、`requirements.md`、`glossary.md`、`roadmap.md` | Blueprint |
 | `01-architecture/` | DDD、十個 contexts、六邊形架構、放行標準、ADR | `overview.md`、`strategic-design.md`、`bounded-contexts.md`、`development-readiness.md`、`tactical-design.md`、`hexagonal-architecture.md`、`dependency-rule.md`、`advanced-patterns.md`、`adr/README.md` | Blueprint |
-| `02-domain/` | Domain 規則、Aggregate、VO、事件 | `employee.md`、`attendance.md`、`leave.md`、`overtime.md`、`approval.md`、`payroll.md`、`audit-log.md` | Ready |
+| `02-domain/` | Domain 規則、Aggregate、VO、事件 | `employee.md`、`organization.md`、`schedule.md`、`attendance.md`、`leave.md`、`overtime.md`、`approval.md`、`payroll.md`、`audit-log.md`、`notification.md` | Ready |
 | `03-application/` | Use Case、ports、application contract | `use-cases.md`、`commands.md`、`queries.md`、`ports.md` | Ready |
-| `04-infrastructure/` | Firebase、Firestore schema、rules、adapters | `firebase-overview.md`、`firestore-schema.md`、`firestore-rules.md`、`storage-rules.md`、`firebase-emulator.md` | Ready |
+| `04-infrastructure/` | Firebase、Firestore schema、rules、外部 adapters | `firebase-overview.md`、`firestore-schema.md`、`firestore-rules.md`、`storage-rules.md`、`firebase-emulator.md`、`line-bot-integration.md`、`google-workspace-integration.md` | Ready |
 | `05-frontend/` | App Router 邊界、UI 規範 | `app-router.md`、`page-map.md`、`forms.md`、`shadcn-ui.md` | Ready |
 | `06-devops/` | CI、部署、環境流程 | `local-setup.md`、`env-vars.md`、`deployment.md`、`github-actions.md` | Ready |
 | `07-security/` | 角色、capability、audit、資料分類 | `roles-permissions.md`、`data-classification.md`、`audit.md` | Ready |

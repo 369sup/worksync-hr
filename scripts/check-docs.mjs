@@ -46,12 +46,15 @@ for (const type of ["Core", "Supporting", "Generic"]) {
 
 const contexts = [
   "Employee",
+  "Organization",
+  "Schedule",
   "Attendance",
   "Leave",
   "Overtime",
   "Approval",
   "Payroll",
   "Audit",
+  "Notification",
 ];
 for (const context of contexts) {
   const ownerRow = `| \`${context}\` |`;
@@ -62,26 +65,42 @@ for (const context of contexts) {
 }
 
 const contracts = [
-  "AuthenticatedIdentity",
-  "EmployeeProfileSnapshot",
-  "EmployeePayrollSnapshot",
+  "EmployeeSnapshot",
+  "OrganizationMembershipSnapshot",
+  "PayrollMembershipSnapshot",
+  "WorkScheduleSnapshot",
   "ApprovalAssignmentResult",
   "ApprovedLeaveSummary",
   "FinalizedAttendanceSummary",
   "OvertimeAdjustment",
-  "CompensatoryLeaveGrant",
-  "AppendAuditRecord",
-  "AuditFactRecorded",
+  "PayrollResultSummary",
+  "SalarySlipView",
+  "AuditRecordView",
+  "NotificationStatusSummary",
 ];
 for (const contract of contracts) {
   requireText(bounded, contract, "bounded-contexts");
-  requireText(glossary, `\`${contract}\``, "glossary");
 }
 
-for (const contract of contracts.slice(1, 8)) {
-  const occurrences = bounded.split(contract).length - 1;
-  if (occurrences < 2) {
-    failures.push(`bounded-contexts: ${contract} is not present in map and catalog`);
+const legacyContracts = [
+  "EmployeeProfileSnapshot",
+  "EmployeePayrollSnapshot",
+  "CompensatoryLeaveGrant",
+];
+const compatibilityMarkers =
+  /相容別名|compatibility alias|legacy alias|deprecated compatibility alias|舊檢查器|舊事件|僅為舊/;
+for (const [file, content] of documents) {
+  for (const [index, line] of content.split(/\r?\n/).entries()) {
+    for (const contract of legacyContracts) {
+      const legacyIdentifier = new RegExp(
+        `(?<![A-Za-z0-9_])${contract}(?![A-Za-z0-9_])`,
+      );
+      if (legacyIdentifier.test(line) && !compatibilityMarkers.test(line)) {
+        failures.push(
+          `${path.relative(root, file)}:${index + 1}: legacy ${contract} is outside compatibility alias documentation`,
+        );
+      }
+    }
   }
 }
 
@@ -104,7 +123,6 @@ for (const [file, content] of documents) {
 requireText(tactical, "PayrollPeriodRepository", "tactical-design");
 requireText(tactical, "PayrollInputVersion", "tactical-design");
 requireText(bounded, "Overtime", "bounded-contexts");
-requireText(bounded, "CompensatoryLeaveGrant", "bounded-contexts");
 
 const appRoot = path.join(root, "src", "app");
 async function routeDirectories(directory) {

@@ -12,3 +12,5 @@ applyTo: "src/infrastructure/firebase/**,firestore.rules,storage.rules,docs/04-i
 - Auth provider 只證明 identity；角色與 capability 真相留在 server-side。
 - 所有業務資料使用 `tenants/{tenantId}/...` 隔離；tenant 由 server-side ActorContext 提供。
 - Admin SDK 會繞過 Security Rules，Application policy 仍須驗證 tenant、capability、scope。
+- LINE SDK 只可在 Infrastructure／Notification adapter；LINE Bot 暫時只做通知，不得處理 command／mutation。
+- 任務未要求時，不修改 `src/**`、不新增套件或 workflow。

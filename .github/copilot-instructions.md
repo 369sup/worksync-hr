@@ -12,6 +12,10 @@
 - Firebase Auth / Firestore / Storage
 - DDD + Hexagonal Architecture
 
+## Task scope defaults
+- 任務未明確要求時，不修改 `src/**`、不新增套件、workflow 或架構。
+- LINE Bot 暫時只做通知，不得處理 command／mutation；LINE SDK 只可在 Infrastructure／Notification adapter。
+
 ## Build commands
 | 用途 | 指令 |
 | --- | --- |
@@ -50,6 +54,7 @@
 - 需要 modal deep link 時，可搭配 Intercepting Routes。
 - 簡單 auth / public / one-off page 可使用普通 routes。
 - Slot 不等於 Bounded Context；UI layout 不可決定 Domain model。
+- UI 預設 shadcn/ui；component／variant 命名不得成為 Domain 真相來源。
 
 ## Documentation rules
 - 文件使用繁體中文。

@@ -158,6 +158,8 @@ flowchart LR
 
 ## 第四階段：進階落地模式 Advanced Patterns
 
+> 本段為模式認識，不代表 worksync-hr 目前採用。實際採用狀態以 `advanced-patterns.md` 為準；目前不預設 Outbox、Message Broker、Saga、Event Sourcing。
+
 目的：在系統面臨高效能、資料隔離、分散式一致性需求時，引入更進階的工程模式。
 
 1. **DTO 與 VO 的區隔**
