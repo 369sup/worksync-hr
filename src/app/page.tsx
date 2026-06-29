@@ -1,65 +1,80 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+import { appManifest } from "@/bootstrap/composition/app-manifest";
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-6 py-10 md:px-10">
+      <section className="grid gap-6 rounded-[2rem] border border-black/10 bg-white p-8 shadow-[0_20px_80px_rgba(15,23,42,0.08)]">
+        <p className="text-sm font-medium uppercase tracking-[0.3em] text-[var(--color-accent)]">
+          Hexagonal Architecture
+        </p>
+        <div className="grid gap-4">
+          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance md:text-6xl">
+            SUP HR App scaffold now runs on{" "}
+            <span className="text-[var(--color-accent)]">src/app</span>.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="max-w-3xl text-base leading-8 text-slate-600 md:text-lg">
+            The route layer lives in <code>src/app</code>, the domain lives in{" "}
+            <code>src/modules</code>, and system wiring stays in{" "}
+            <code>src/bootstrap</code>.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/dashboard"
+            className="rounded-full bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Open workspace
+          </Link>
+          <Link
+            href="/leave-requests"
+            className="rounded-full border border-black/10 px-5 py-3 text-sm font-semibold transition hover:bg-slate-50"
           >
-            Documentation
+            View leave scaffold
+          </Link>
+          <a
+            href="/api/health"
+            className="rounded-full border border-black/10 px-5 py-3 text-sm font-semibold transition hover:bg-slate-50"
+          >
+            Health endpoint
           </a>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <article className="rounded-[1.5rem] border border-black/10 bg-[var(--color-surface)] p-6">
+          <h2 className="text-xl font-semibold">Current route root</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            <code>{appManifest.routeRoot}</code> is the only valid route root in
+            this repository.
+          </p>
+        </article>
+        <article className="rounded-[1.5rem] border border-black/10 bg-[var(--color-surface)] p-6">
+          <h2 className="text-xl font-semibold">First bounded context</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            <code>{appManifest.primaryContext}</code> is scaffolded with domain,
+            application, adapter, and contract folders.
+          </p>
+        </article>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        {appManifest.contexts.map((context) => (
+          <article
+            key={context.name}
+            className="rounded-[1.5rem] border border-black/10 bg-white p-6 shadow-[0_10px_35px_rgba(15,23,42,0.05)]"
+          >
+            <p className="text-sm uppercase tracking-[0.25em] text-slate-500">
+              {context.kind}
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold">{context.name}</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              {context.description}
+            </p>
+          </article>
+        ))}
+      </section>
+    </main>
   );
 }
