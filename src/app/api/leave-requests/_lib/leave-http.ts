@@ -33,28 +33,46 @@ export async function withLeaveActor(
   handler: (input: {
     runtime: LeaveApiRuntime;
     actor: ActorContext;
-    correlationId: string;
+    requestId: string;
   }) => Promise<Response>,
 ) {
-  const correlationId =
+  const requestId =
     request.headers.get("x-correlation-id")?.trim() || crypto.randomUUID();
   let runtime: LeaveApiRuntime | undefined;
+  let actor: ActorContext | undefined;
   try {
     runtime = createLeaveApiRuntime();
     const sessionCookie = request.cookies.get(SESSION_COOKIE)?.value;
     if (!sessionCookie) throw new UnauthenticatedError();
     const identity =
       await runtime.authentication.verifySessionCookie(sessionCookie);
-    const actor = await runtime.actors.create(identity, correlationId);
-    return await handler({ runtime, actor, correlationId });
+    actor = await runtime.actors.create(identity, {
+      requestId,
+      requestSource: "api",
+    });
+    return await handler({ runtime, actor, requestId });
   } catch (error) {
-    return toErrorResponse(error, correlationId);
+    if (runtime && actor && statusFor(errorCode(error)) === 403) {
+      try {
+        await runtime.audit.append({
+          actor,
+          action: "LeaveRequestAccessDenied",
+          targetRef: { type: "HttpRoute", id: new URL(request.url).pathname },
+          result: "denied",
+          reason: error instanceof Error ? error.message : undefined,
+          occurredAt: new Date(),
+        });
+      } catch {
+        // The request remains denied even when audit persistence is unavailable.
+      }
+    }
+    return toErrorResponse(error, requestId);
   } finally {
     await runtime?.close();
   }
 }
 
-export function toErrorResponse(error: unknown, correlationId: string) {
+export function toErrorResponse(error: unknown, requestId: string) {
   const code = errorCode(error);
   const status = statusFor(code);
   const message =
@@ -66,7 +84,7 @@ export function toErrorResponse(error: unknown, correlationId: string) {
       error: {
         code,
         message,
-        correlationId,
+        requestId,
         ...(error instanceof HttpValidationError && error.fieldErrors
           ? { fieldErrors: error.fieldErrors }
           : {}),
@@ -107,7 +125,6 @@ function statusFor(code: string) {
     [
       "EMPLOYEE_NOT_FOUND",
       "EMPLOYEE_NOT_ELIGIBLE_FOR_LEAVE",
-      "CALENDAR_NOT_ASSIGNED",
       "LEAVE_REQUEST_OVERLAP",
       "INVALID_STATE",
       "CONCURRENT_MODIFICATION",
@@ -115,7 +132,7 @@ function statusFor(code: string) {
     ].includes(code)
   )
     return 409;
-  if (["CALENDAR_NOT_AVAILABLE", "UPSTREAM_UNAVAILABLE"].includes(code))
+  if (["WORK_SCHEDULE_NOT_AVAILABLE", "UPSTREAM_UNAVAILABLE"].includes(code))
     return 503;
   return 500;
 }
@@ -185,7 +202,9 @@ export function parseSearchCriteria(url: string): LeaveRequestSearchCriteria {
   let parsedStatus: LeaveRequestStatus | undefined;
   if (status && !isLeaveStatus(status)) {
     throw new HttpValidationError("status is invalid.", {
-      status: ["status must be pending, approved, rejected, or cancelled."],
+      status: [
+        "status must be pending, approved, rejected, cancelled, or cancelled-after-approval.",
+      ],
     });
   }
   if (status && isLeaveStatus(status)) parsedStatus = status;
@@ -227,5 +246,11 @@ function integerParameter(
 }
 
 function isLeaveStatus(value: string): value is LeaveRequestStatus {
-  return ["pending", "approved", "rejected", "cancelled"].includes(value);
+  return [
+    "pending",
+    "approved",
+    "rejected",
+    "cancelled",
+    "cancelled-after-approval",
+  ].includes(value);
 }

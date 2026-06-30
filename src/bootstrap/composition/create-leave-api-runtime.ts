@@ -1,18 +1,18 @@
 import { ActorContextFactory } from "@/bootstrap/auth/actor-context-factory";
 import { createFirebaseAdminAuth } from "@/bootstrap/auth/firebase-admin";
 import { FirebaseAuthenticationAdapter } from "@/bootstrap/auth/firebase-authentication-adapter";
-import { PostgresMembershipQueryAdapter } from "@/bootstrap/auth/postgres-membership-query-adapter";
+import { FirestoreMembershipQueryAdapter } from "@/bootstrap/auth/firestore-membership-query-adapter";
 import { readServerEnvironment } from "@/bootstrap/env/env";
-import { createPostgresDatabase } from "@/bootstrap/persistence/postgres";
+import { createFirestoreDatabase } from "@/bootstrap/persistence/firestore";
 import {
-  developmentLeaveEligibilityPolicy,
-  developmentLeaveWorkCalendars,
-} from "@/modules/leave/adapters/external-systems/development-leave-dependencies";
-import {
-  PostgresEmployeeLeaveProfileQueryAdapter,
-  PostgresLeaveAccessQueryAdapter,
-} from "@/modules/leave/adapters/external-systems/postgres-employee-leave-profile-query-adapter";
-import { PostgresLeaveRequestRepository } from "@/modules/leave/adapters/repositories/postgres-leave-request-repository";
+  FirestoreEmployeeSnapshotQueryAdapter,
+  FirestoreLeaveAccessQueryAdapter,
+  FirestoreLeaveTypeSnapshotQueryAdapter,
+  FirestoreWorkScheduleSnapshotQueryAdapter,
+} from "@/modules/leave/adapters/external-systems/firestore-leave-query-adapters";
+import { FirestoreLeaveRequestRepository } from "@/modules/leave/adapters/repositories/firestore-leave-request-repository";
+import { FirestoreAuditAdapter } from "@/modules/leave/adapters/audit/firestore-audit-adapter";
+import { DefaultLeaveEligibilityPolicy } from "@/modules/leave/domain/policies/leave-eligibility-policy";
 import { ApproveLeaveRequestUseCase } from "@/modules/leave/application/use-cases/approve-leave-request";
 import { CancelLeaveRequestUseCase } from "@/modules/leave/application/use-cases/cancel-leave-request";
 import { GetLeaveRequestDetailUseCase } from "@/modules/leave/application/use-cases/get-leave-request-detail";
@@ -20,40 +20,42 @@ import { RejectLeaveRequestUseCase } from "@/modules/leave/application/use-cases
 import { SearchLeaveRequestsUseCase } from "@/modules/leave/application/use-cases/search-leave-requests";
 import { SubmitLeaveRequestUseCase } from "@/modules/leave/application/use-cases/submit-leave-request";
 import { systemClock } from "@/shared/kernel/clock";
+import { cryptoIdentifierGenerator } from "@/bootstrap/identifiers/crypto-identifier-generator";
 
 export function createLeaveApiRuntime() {
   const environment = readServerEnvironment();
-  const persistence = createPostgresDatabase(environment);
-  const repository = new PostgresLeaveRequestRepository(persistence.database);
-  const employeeProfiles = new PostgresEmployeeLeaveProfileQueryAdapter(
+  const persistence = createFirestoreDatabase(environment);
+  const repository = new FirestoreLeaveRequestRepository(persistence.database);
+  const employees = new FirestoreEmployeeSnapshotQueryAdapter(
     persistence.database,
   );
-  const access = new PostgresLeaveAccessQueryAdapter(persistence.database);
+  const workSchedules = new FirestoreWorkScheduleSnapshotQueryAdapter(
+    persistence.database,
+  );
+  const leaveTypes = new FirestoreLeaveTypeSnapshotQueryAdapter(
+    persistence.database,
+  );
+  const access = new FirestoreLeaveAccessQueryAdapter(persistence.database);
+  const audit = new FirestoreAuditAdapter(persistence.database);
   const authentication = new FirebaseAuthenticationAdapter(
     createFirebaseAdminAuth(environment),
     environment.firebase,
   );
   const actors = new ActorContextFactory(
-    environment.appTenantId,
-    new PostgresMembershipQueryAdapter(persistence.database),
+    new FirestoreMembershipQueryAdapter(persistence.database),
   );
-  const workCalendars =
-    process.env.NODE_ENV === "production"
-      ? {
-          async getLeaveWorkCalendar() {
-            return null;
-          },
-        }
-      : developmentLeaveWorkCalendars;
 
   return {
     authentication,
     actors,
+    audit,
     submit: new SubmitLeaveRequestUseCase(
       repository,
-      employeeProfiles,
-      workCalendars,
-      developmentLeaveEligibilityPolicy,
+      employees,
+      workSchedules,
+      leaveTypes,
+      new DefaultLeaveEligibilityPolicy(),
+      cryptoIdentifierGenerator,
       systemClock,
       repository,
     ),
@@ -74,6 +76,7 @@ export function createLeaveApiRuntime() {
       repository,
       access,
       systemClock,
+      audit,
     ),
     search: new SearchLeaveRequestsUseCase(repository, access, systemClock),
     close: persistence.close,

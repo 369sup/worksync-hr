@@ -5,9 +5,9 @@ import type { LeaveRequest } from "../../domain/aggregates/leave-request";
 import type { LeaveRequestRepository } from "../../domain/repositories/leave-request-repository";
 import { LeaveRequestId } from "../../domain/value-objects/leave-request-id";
 import { LeaveApplicationError } from "../errors/leave-application-error";
-import type { LeaveApprovalQueryPort } from "../ports/outbound/leave-approval-query-port";
+import type { ApprovalAssignmentQueryPort } from "../ports/outbound/approval-assignment-query-port";
 import type { LeaveRequestVisibilityScope } from "../ports/outbound/leave-request-query-port";
-import type { LeaveVisibilityQueryPort } from "../ports/outbound/leave-visibility-query-port";
+import type { OrganizationTeamScopeQueryPort } from "../ports/outbound/organization-team-scope-query-port";
 
 export function assertActiveMembership(actor: ActorContext) {
   if (actor.membershipStatus !== "active") {
@@ -45,10 +45,10 @@ export async function loadLeaveRequest(
 export async function assertResolvedApprover(input: {
   actor: ActorContext;
   request: LeaveRequest;
-  approval: LeaveApprovalQueryPort;
+  approval: ApprovalAssignmentQueryPort;
 }) {
   assertActiveMembership(input.actor);
-  assertCapability(input.actor, "leave.approve.department");
+  assertCapability(input.actor, "leave.approve.team");
   if (!input.actor.employeeId) {
     throw new LeaveApplicationError(
       "FORBIDDEN",
@@ -57,22 +57,24 @@ export async function assertResolvedApprover(input: {
   }
 
   const snapshot = input.request.toSnapshot();
-  const assignment = await input.approval.resolveApprover({
+  const assignment = await input.approval.resolveApprovalAssignment({
     tenantId: input.actor.tenantId,
-    employeeId: snapshot.employeeId,
+    leaveRequestId: snapshot.id,
     requestedAt: snapshot.submittedAt,
   });
   if (
     assignment &&
     (assignment.tenantId !== input.actor.tenantId ||
-      assignment.employeeId !== snapshot.employeeId)
+      assignment.targetRef.id !== snapshot.id)
   ) {
     throw new LeaveApplicationError(
       "UPSTREAM_UNAVAILABLE",
       "Approver scope returned invalid identity data.",
     );
   }
-  if (!assignment || assignment.approverId !== input.actor.employeeId) {
+  const responsibleMembershipId =
+    assignment?.delegateMembershipId ?? assignment?.approverMembershipId;
+  if (!assignment || responsibleMembershipId !== input.actor.membershipId) {
     throw new LeaveApplicationError(
       "FORBIDDEN",
       "Leave request is outside the approver scope.",
@@ -82,7 +84,7 @@ export async function assertResolvedApprover(input: {
 
 export async function resolveVisibility(input: {
   actor: ActorContext;
-  visibility: LeaveVisibilityQueryPort;
+  visibility: OrganizationTeamScopeQueryPort;
   clock: Clock;
 }): Promise<LeaveRequestVisibilityScope> {
   assertActiveMembership(input.actor);
@@ -102,10 +104,10 @@ export async function resolveVisibility(input: {
   if (input.actor.capabilities.includes("leave.read.self")) {
     employeeIds.add(input.actor.employeeId);
   }
-  if (input.actor.capabilities.includes("leave.read.department")) {
+  if (input.actor.capabilities.includes("leave.approve.team")) {
     const managed = await input.visibility.getManagedEmployeeIds({
       tenantId: input.actor.tenantId,
-      managerEmployeeId: input.actor.employeeId,
+      managerMembershipId: input.actor.membershipId,
       effectiveAt: input.clock.now().toISOString(),
     });
     if (managed.tenantId !== input.actor.tenantId) {

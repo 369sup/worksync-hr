@@ -1,21 +1,26 @@
 import type { Clock } from "@/shared/kernel/clock";
 
 import { LeaveRequest } from "../../domain/aggregates/leave-request";
+import { LeaveRequestId } from "../../domain/value-objects/leave-request-id";
 import type { LeaveEligibilityPolicy } from "../../domain/policies/leave-eligibility-policy";
 import type { LeaveRequestRepository } from "../../domain/repositories/leave-request-repository";
 import type { SubmitLeaveRequestCommand } from "../commands/submit-leave-request.command";
 import { LeaveApplicationError } from "../errors/leave-application-error";
-import type { EmployeeLeaveProfileQueryPort } from "../ports/outbound/employee-leave-profile-query-port";
+import type { EmployeeSnapshotQueryPort } from "../ports/outbound/employee-snapshot-query-port";
 import type { LeaveCommandTransactionPort } from "../ports/outbound/leave-command-transaction-port";
-import type { LeaveWorkCalendarQueryPort } from "../ports/outbound/leave-work-calendar-query-port";
+import type { IdentifierGeneratorPort } from "../ports/outbound/identifier-generator-port";
+import type { LeaveTypeSnapshotQueryPort } from "../ports/outbound/leave-type-snapshot-query-port";
+import type { WorkScheduleSnapshotQueryPort } from "../ports/outbound/work-schedule-snapshot-query-port";
 import { assertActiveMembership } from "./leave-use-case-support";
 
 export class SubmitLeaveRequestUseCase {
   constructor(
     private readonly repository: LeaveRequestRepository,
-    private readonly employeeProfiles: EmployeeLeaveProfileQueryPort,
-    private readonly workCalendars: LeaveWorkCalendarQueryPort,
+    private readonly employees: EmployeeSnapshotQueryPort,
+    private readonly workSchedules: WorkScheduleSnapshotQueryPort,
+    private readonly leaveTypes: LeaveTypeSnapshotQueryPort,
     private readonly eligibilityPolicy: LeaveEligibilityPolicy,
+    private readonly identifiers: IdentifierGeneratorPort,
     private readonly clock: Clock,
     private readonly transactions: LeaveCommandTransactionPort,
   ) {}
@@ -40,7 +45,6 @@ export class SubmitLeaveRequestUseCase {
       payload: {
         employeeId: actor.employeeId,
         leaveTypeId: command.leaveTypeId,
-        leaveTypeCode: command.leaveTypeCode,
         startAt: command.startAt.toISOString(),
         endAt: command.endAt.toISOString(),
         reason: command.reason.trim(),
@@ -52,7 +56,18 @@ export class SubmitLeaveRequestUseCase {
     }
 
     const submittedAt = this.clock.now();
-    const employee = await this.employeeProfiles.getEmployeeLeaveSnapshot({
+    const leaveType = await this.leaveTypes.getLeaveTypeSnapshot({
+      tenantId: actor.tenantId,
+      leaveTypeId: command.leaveTypeId,
+      effectiveAt: submittedAt.toISOString(),
+    });
+    if (!leaveType || leaveType.status !== "active") {
+      throw new LeaveApplicationError(
+        "INVALID_INPUT",
+        "Leave type is not available.",
+      );
+    }
+    const employee = await this.employees.getEmployeeSnapshot({
       tenantId: actor.tenantId,
       employeeId: actor.employeeId,
       effectiveAt: submittedAt.toISOString(),
@@ -63,39 +78,30 @@ export class SubmitLeaveRequestUseCase {
         "Employee profile was not found.",
       );
     }
-    if (employee.employmentStatus !== "active") {
+    if (employee.status !== "active") {
       throw new LeaveApplicationError(
         "EMPLOYEE_NOT_ELIGIBLE_FOR_LEAVE",
         "Employee is not eligible for leave.",
       );
     }
-    if (!employee.assignedCalendarId) {
-      throw new LeaveApplicationError(
-        "CALENDAR_NOT_ASSIGNED",
-        "Employee does not have an assigned work calendar.",
-      );
-    }
-
-    const calendar = await this.workCalendars.getLeaveWorkCalendar({
+    const schedule = await this.workSchedules.getWorkScheduleSnapshot({
       tenantId: actor.tenantId,
       employeeId: actor.employeeId,
-      assignedCalendarId: employee.assignedCalendarId,
-      timezone: employee.timezone,
       startAt: command.startAt.toISOString(),
       endAt: command.endAt.toISOString(),
     });
-    if (!calendar) {
+    if (!schedule) {
       throw new LeaveApplicationError(
-        "CALENDAR_NOT_AVAILABLE",
-        "Work calendar is not available.",
+        "WORK_SCHEDULE_NOT_AVAILABLE",
+        "Published work schedule is not available.",
       );
     }
 
     this.eligibilityPolicy.assertEligible({
       employee,
-      calendar,
+      schedule,
       leaveTypeId: command.leaveTypeId,
-      leaveTypeCode: command.leaveTypeCode,
+      leaveTypeCode: leaveType.code,
       startAt: command.startAt,
       endAt: command.endAt,
     });
@@ -116,9 +122,10 @@ export class SubmitLeaveRequestUseCase {
 
     const request = LeaveRequest.submit({
       tenantId: actor.tenantId,
+      id: LeaveRequestId.create(this.identifiers.generate("leave")),
       employeeId: actor.employeeId,
       leaveTypeId: command.leaveTypeId,
-      leaveTypeCode: command.leaveTypeCode,
+      leaveTypeCode: leaveType.code,
       startAt: command.startAt,
       endAt: command.endAt,
       reason: command.reason,
@@ -127,8 +134,7 @@ export class SubmitLeaveRequestUseCase {
 
     const snapshot = await this.transactions.commit({
       tenantId: actor.tenantId,
-      actorId: actor.userId,
-      correlationId: actor.correlationId,
+      actor,
       action: "LeaveRequestSubmitted",
       occurredAt: submittedAt,
       request,

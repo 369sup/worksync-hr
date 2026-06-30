@@ -1,24 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { MvpLeaveEligibilityPolicy } from "./leave-eligibility-policy";
+import { DefaultLeaveEligibilityPolicy } from "./leave-eligibility-policy";
 
-const policy = new MvpLeaveEligibilityPolicy();
+const policy = new DefaultLeaveEligibilityPolicy();
 const input = {
   employee: {
     tenantId: "tenant_test",
     employeeId: "EMP-001",
-    employmentStatus: "active" as const,
-    timezone: "Asia/Taipei",
-    assignedCalendarId: "CAL-001",
+    status: "active" as const,
   },
-  calendar: {
+  schedule: {
     tenantId: "tenant_test",
-    assignedCalendarId: "CAL-001",
-    timezone: "Asia/Taipei",
-    workingIntervals: [
+    employeeId: "EMP-001",
+    workDays: [
       {
-        startAt: "2026-07-01T01:00:00.000Z",
-        endAt: "2026-07-01T09:00:00.000Z",
+        workingIntervals: [
+          {
+            startAt: "2026-07-01T01:00:00.000Z",
+            endAt: "2026-07-01T09:00:00.000Z",
+          },
+        ],
       },
     ],
   },
@@ -28,22 +29,22 @@ const input = {
   endAt: new Date("2026-07-01T08:00:00.000Z"),
 };
 
-describe("MvpLeaveEligibilityPolicy", () => {
-  it("accepts a request that uses the employee calendar and working time", () => {
+describe("DefaultLeaveEligibilityPolicy", () => {
+  it("accepts a request that overlaps published working time", () => {
     expect(() => policy.assertEligible(input)).not.toThrow();
   });
 
-  it("fails closed when calendar identity or working time does not match", () => {
+  it("fails closed when schedule identity or working time does not match", () => {
     expect(() =>
       policy.assertEligible({
         ...input,
-        calendar: { ...input.calendar, assignedCalendarId: "CAL-OTHER" },
+        schedule: { ...input.schedule, employeeId: "EMP-OTHER" },
       }),
     ).toThrow("Employee or work calendar is not eligible");
     expect(() =>
       policy.assertEligible({
         ...input,
-        calendar: { ...input.calendar, workingIntervals: [] },
+        schedule: { ...input.schedule, workDays: [] },
       }),
     ).toThrow("Employee or work calendar is not eligible");
   });

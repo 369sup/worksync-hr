@@ -1,8 +1,6 @@
 export interface ServerEnvironment {
-  readonly appName: "sup-hr-app";
+  readonly appName: "worksync-hr";
   readonly routeRoot: "src/app";
-  readonly databaseUrl: string;
-  readonly appTenantId: string;
   readonly firebase: {
     readonly projectId: string;
     readonly clientEmail?: string;
@@ -63,10 +61,8 @@ export function readServerEnvironment(
   }
 
   return {
-    appName: "sup-hr-app",
+    appName: "worksync-hr",
     routeRoot: "src/app",
-    databaseUrl: required(source, "DATABASE_URL"),
-    appTenantId: required(source, "APP_TENANT_ID"),
     firebase: {
       projectId: required(source, "FIREBASE_PROJECT_ID"),
       clientEmail,

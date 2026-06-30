@@ -11,7 +11,11 @@ import {
 import { LeaveRequestId } from "../value-objects/leave-request-id";
 
 export type LeaveRequestStatus =
-  "pending" | "approved" | "rejected" | "cancelled";
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "cancelled"
+  | "cancelled-after-approval";
 
 export interface LeaveRequestSnapshot {
   tenantId: string;
@@ -24,7 +28,7 @@ export interface LeaveRequestSnapshot {
   reason: string;
   status: LeaveRequestStatus;
   submittedAt: string;
-  approverId: string | null;
+  approverMembershipId: string | null;
   approvedAt: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
@@ -41,7 +45,7 @@ export class LeaveRequest {
 
   static submit(input: {
     tenantId: string;
-    id?: LeaveRequestId;
+    id: LeaveRequestId;
     employeeId: string;
     leaveTypeId: string;
     leaveTypeCode: string;
@@ -57,7 +61,7 @@ export class LeaveRequest {
 
     const request = new LeaveRequest({
       tenantId: input.tenantId,
-      id: (input.id ?? LeaveRequestId.generate()).value,
+      id: input.id.value,
       employeeId: input.employeeId,
       leaveTypeId: input.leaveTypeId,
       leaveTypeCode: input.leaveTypeCode,
@@ -66,7 +70,7 @@ export class LeaveRequest {
       reason,
       status: "pending",
       submittedAt: input.submittedAt.toISOString(),
-      approverId: null,
+      approverMembershipId: null,
       approvedAt: null,
       rejectedAt: null,
       rejectionReason: null,
@@ -94,40 +98,45 @@ export class LeaveRequest {
     return new LeaveRequest({ ...snapshot });
   }
 
-  approve(input: { approverId: string; approvedAt: Date }) {
+  approve(input: {
+    approverMembershipId: string;
+    approverEmployeeId: string;
+    approvedAt: Date;
+  }) {
     if (this.snapshot.status !== "pending")
       throw new LeaveRequestCannotBeApprovedError();
-    if (input.approverId === this.snapshot.employeeId)
+    if (input.approverEmployeeId === this.snapshot.employeeId)
       throw new SelfApprovalForbiddenError();
 
     this.snapshot.status = "approved";
-    this.snapshot.approverId = input.approverId;
+    this.snapshot.approverMembershipId = input.approverMembershipId;
     this.snapshot.approvedAt = input.approvedAt.toISOString();
     this.snapshot.version += 1;
     this.domainEvents.push({
       eventType: "LeaveRequestApproved",
       tenantId: this.snapshot.tenantId,
       leaveRequestId: this.snapshot.id,
-      approverId: input.approverId,
+      approverMembershipId: input.approverMembershipId,
       approvedAt: this.snapshot.approvedAt,
     });
   }
 
   reject(input: {
-    approverId: string;
+    approverMembershipId: string;
+    approverEmployeeId: string;
     rejectedAt: Date;
     rejectionReason: string;
   }) {
     if (this.snapshot.status !== "pending")
       throw new LeaveRequestCannotBeRejectedError();
-    if (input.approverId === this.snapshot.employeeId)
+    if (input.approverEmployeeId === this.snapshot.employeeId)
       throw new SelfApprovalForbiddenError();
 
     const rejectionReason = input.rejectionReason.trim();
     if (!rejectionReason) throw new RejectionReasonRequiredError();
 
     this.snapshot.status = "rejected";
-    this.snapshot.approverId = input.approverId;
+    this.snapshot.approverMembershipId = input.approverMembershipId;
     this.snapshot.rejectedAt = input.rejectedAt.toISOString();
     this.snapshot.rejectionReason = rejectionReason;
     this.snapshot.version += 1;
@@ -135,7 +144,7 @@ export class LeaveRequest {
       eventType: "LeaveRequestRejected",
       tenantId: this.snapshot.tenantId,
       leaveRequestId: this.snapshot.id,
-      approverId: input.approverId,
+      approverMembershipId: input.approverMembershipId,
       rejectionReason,
       rejectedAt: this.snapshot.rejectedAt,
     });
@@ -146,10 +155,16 @@ export class LeaveRequest {
     cancelledAt: Date;
     overrideReason?: string;
   }) {
-    if (this.snapshot.status !== "pending")
+    if (
+      this.snapshot.status !== "pending" &&
+      this.snapshot.status !== "approved"
+    )
       throw new LeaveRequestCannotBeCancelledError();
 
-    this.snapshot.status = "cancelled";
+    this.snapshot.status =
+      this.snapshot.status === "approved"
+        ? "cancelled-after-approval"
+        : "cancelled";
     this.snapshot.cancelledBy = input.cancelledBy;
     this.snapshot.cancelledAt = input.cancelledAt.toISOString();
     this.snapshot.overrideReason = input.overrideReason?.trim() || null;

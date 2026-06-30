@@ -5,6 +5,18 @@ import { LeaveRequestId } from "../../domain/value-objects/leave-request-id";
 import { InMemoryLeaveRequestRepository } from "./in-memory-leave-request-repository";
 
 describe("InMemoryLeaveRequestRepository", () => {
+  const employeeActor = {
+    tenantId: "tenant_test",
+    userId: "user-1",
+    employeeId: "EMP-001",
+    membershipId: "MEM-001",
+    membershipStatus: "active" as const,
+    capabilities: ["leave.submit.self"],
+    scope: { kind: "self" as const },
+    requestId: "request-1",
+    requestSource: "api" as const,
+  };
+
   it("saves and reloads an aggregate", async () => {
     const repository = new InMemoryLeaveRequestRepository();
     const id = LeaveRequestId.create("leave_test_001");
@@ -56,7 +68,7 @@ describe("InMemoryLeaveRequestRepository", () => {
     expect(page.items[0].employeeId).toBe("EMP-014");
   });
 
-  it("commits audit, idempotency, and published events through adapter ports", async () => {
+  it("commits audit and idempotency through adapter ports", async () => {
     const repository = new InMemoryLeaveRequestRepository();
     const request = LeaveRequest.submit({
       tenantId: "tenant_test",
@@ -71,8 +83,7 @@ describe("InMemoryLeaveRequestRepository", () => {
     });
     await repository.commit({
       tenantId: "tenant_test",
-      actorId: "user-1",
-      correlationId: "correlation-1",
+      actor: employeeActor,
       action: "LeaveRequestSubmitted",
       occurredAt: new Date("2026-06-28T04:00:00.000Z"),
       request,
@@ -102,20 +113,24 @@ describe("InMemoryLeaveRequestRepository", () => {
     ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
 
     request.approve({
-      approverId: "EMP-MANAGER",
+      approverMembershipId: "MEM-MANAGER",
+      approverEmployeeId: "EMP-MANAGER",
       approvedAt: new Date("2026-06-28T05:00:00.000Z"),
     });
     await repository.commit({
       tenantId: "tenant_test",
-      actorId: "user-manager",
-      correlationId: "correlation-2",
+      actor: {
+        ...employeeActor,
+        userId: "user-manager",
+        employeeId: "EMP-MANAGER",
+        membershipId: "MEM-MANAGER",
+        requestId: "request-2",
+      },
       action: "LeaveRequestApproved",
       occurredAt: new Date("2026-06-28T05:00:00.000Z"),
       request,
       domainEvents: request.pullDomainEvents(),
     });
-    expect(repository.getOutboxEvents()).toEqual([
-      expect.objectContaining({ eventType: "leave.request.approved" }),
-    ]);
+    expect(repository.getAuditRecords()).toHaveLength(2);
   });
 });

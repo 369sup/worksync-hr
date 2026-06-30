@@ -10,7 +10,10 @@ async function loadVisibleRequests() {
   try {
     const identity =
       await runtime.authentication.verifySessionCookie(sessionCookie);
-    const actor = await runtime.actors.create(identity, crypto.randomUUID());
+    const actor = await runtime.actors.create(identity, {
+      requestId: crypto.randomUUID(),
+      requestSource: "ui",
+    });
     const result = await runtime.search.execute({
       actor,
       criteria: { page: 1, pageSize: 20 },

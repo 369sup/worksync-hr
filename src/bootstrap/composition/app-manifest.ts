@@ -2,55 +2,60 @@ import type { ContextManifest } from "@/shared/types/context-manifest";
 
 const contexts: ContextManifest[] = [
   {
-    name: "leave",
-    kind: "core",
-    description:
-      "Leave requests, leave-policy application, and leave-facing published facts.",
+    name: "Employee",
+    kind: "supporting",
+    description: "Employee master data and EmployeeSnapshot publication.",
   },
   {
-    name: "attendance",
-    kind: "core",
-    description:
-      "Punches, attendance records, work-duration summaries, and anomaly handling.",
-  },
-  {
-    name: "overtime",
-    kind: "core",
-    description:
-      "Overtime requests, compensation outcomes, and compensatory-leave generation.",
-  },
-  {
-    name: "payroll",
-    kind: "core",
-    description:
-      "Payroll periods, payable items, salary slips, and payroll-facing settlement.",
-  },
-  {
-    name: "employee-profile",
+    name: "Organization",
     kind: "supporting",
     description:
-      "Employee master data, tenant membership, and capability snapshots.",
+      "Organization units, memberships, reporting lines, roles, and capabilities.",
   },
   {
-    name: "scheduling",
+    name: "Schedule",
     kind: "supporting",
-    description: "Shift definitions, rosters, and shift-assignment snapshots.",
+    description: "Shift definitions and versioned work schedules.",
   },
   {
-    name: "approval-flow",
-    kind: "supporting",
-    description: "Approver resolution, delegation, and approval-route lookup.",
+    name: "Attendance",
+    kind: "core",
+    description: "Punches, attendance records, exceptions, and finalization.",
   },
   {
-    name: "notification",
+    name: "Leave",
+    kind: "core",
+    description: "Leave types, requests, balances, and approved summaries.",
+  },
+  {
+    name: "Overtime",
+    kind: "core",
+    description: "Overtime requests and compensation outcomes.",
+  },
+  {
+    name: "Approval",
     kind: "supporting",
-    description:
-      "Notification dispatch, delivery channels, and delivery status tracking.",
+    description: "Approval responsibility, delegation, and assignment results.",
+  },
+  {
+    name: "Payroll",
+    kind: "core",
+    description: "Payroll periods, frozen inputs, results, and salary slips.",
+  },
+  {
+    name: "Audit",
+    kind: "generic",
+    description: "Append-only security and sensitive-operation facts.",
+  },
+  {
+    name: "Notification",
+    kind: "generic",
+    description: "Post-commit notification delivery and retry status.",
   },
 ];
 
 export const appManifest = {
   routeRoot: "src/app",
-  primaryContext: "leave",
+  primaryContext: "Leave",
   contexts,
 } as const;

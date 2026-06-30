@@ -1,6 +1,7 @@
 import {
   applicationDefault,
   cert,
+  type App,
   getApps,
   initializeApp,
 } from "firebase-admin/app";
@@ -8,11 +9,11 @@ import { getAuth } from "firebase-admin/auth";
 
 import type { ServerEnvironment } from "@/bootstrap/env/env";
 
-const FIREBASE_APP_NAME = "sup-hr-app-server";
+const FIREBASE_APP_NAME = "worksync-hr-server";
 
-export function createFirebaseAdminAuth(environment: ServerEnvironment) {
+export function createFirebaseAdminApp(environment: ServerEnvironment): App {
   const existing = getApps().find((app) => app.name === FIREBASE_APP_NAME);
-  const app =
+  return (
     existing ??
     initializeApp(
       {
@@ -27,7 +28,10 @@ export function createFirebaseAdminAuth(environment: ServerEnvironment) {
             : applicationDefault(),
       },
       FIREBASE_APP_NAME,
-    );
+    )
+  );
+}
 
-  return getAuth(app);
+export function createFirebaseAdminAuth(environment: ServerEnvironment) {
+  return getAuth(createFirebaseAdminApp(environment));
 }

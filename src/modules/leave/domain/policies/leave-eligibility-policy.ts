@@ -5,17 +5,16 @@ export interface LeaveEligibilityPolicy {
     readonly employee: {
       readonly tenantId: string;
       readonly employeeId: string;
-      readonly employmentStatus: "active" | "inactive" | "suspended";
-      readonly timezone: string;
-      readonly assignedCalendarId: string | null;
+      readonly status: "active" | "inactive" | "suspended";
     };
-    readonly calendar: {
+    readonly schedule: {
       readonly tenantId: string;
-      readonly assignedCalendarId: string;
-      readonly timezone: string;
-      readonly workingIntervals: readonly {
-        readonly startAt: string;
-        readonly endAt: string;
+      readonly employeeId: string;
+      readonly workDays: readonly {
+        readonly workingIntervals: readonly {
+          readonly startAt: string;
+          readonly endAt: string;
+        }[];
       }[];
     };
     readonly leaveTypeId: string;
@@ -25,18 +24,17 @@ export interface LeaveEligibilityPolicy {
   }): void;
 }
 
-export class MvpLeaveEligibilityPolicy implements LeaveEligibilityPolicy {
+export class DefaultLeaveEligibilityPolicy implements LeaveEligibilityPolicy {
   assertEligible(
     input: Parameters<LeaveEligibilityPolicy["assertEligible"]>[0],
   ) {
     const identifiersAreValid =
       Boolean(input.leaveTypeId.trim()) && Boolean(input.leaveTypeCode.trim());
-    const calendarMatchesEmployee =
-      input.employee.tenantId === input.calendar.tenantId &&
-      input.employee.assignedCalendarId === input.calendar.assignedCalendarId &&
-      input.employee.timezone === input.calendar.timezone;
-    const requestTouchesWorkingTime = input.calendar.workingIntervals.some(
-      (interval) => {
+    const scheduleMatchesEmployee =
+      input.employee.tenantId === input.schedule.tenantId &&
+      input.employee.employeeId === input.schedule.employeeId;
+    const requestTouchesWorkingTime = input.schedule.workDays.some((workDay) =>
+      workDay.workingIntervals.some((interval) => {
         const startAt = new Date(interval.startAt);
         const endAt = new Date(interval.endAt);
         return (
@@ -45,13 +43,13 @@ export class MvpLeaveEligibilityPolicy implements LeaveEligibilityPolicy {
           startAt < input.endAt &&
           endAt > input.startAt
         );
-      },
+      }),
     );
 
     if (
-      input.employee.employmentStatus !== "active" ||
+      input.employee.status !== "active" ||
       !identifiersAreValid ||
-      !calendarMatchesEmployee ||
+      !scheduleMatchesEmployee ||
       !requestTouchesWorkingTime
     ) {
       throw new EmployeeNotEligibleForLeaveError();

@@ -3,6 +3,7 @@ import type {
   LeaveRequestSnapshot,
 } from "../../../domain/aggregates/leave-request";
 import type { LeaveRequestEvent } from "../../../domain/events/leave-request-event";
+import type { ActorContext } from "@/shared/types/actor-context";
 
 export type LeaveAuditAction =
   | "LeaveRequestSubmitted"
@@ -24,8 +25,7 @@ export interface LeaveCommandTransactionPort {
 
   commit(input: {
     readonly tenantId: string;
-    readonly actorId: string;
-    readonly correlationId: string;
+    readonly actor: ActorContext;
     readonly action: LeaveAuditAction;
     readonly occurredAt: Date;
     readonly auditReason?: string;

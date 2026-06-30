@@ -40,7 +40,7 @@ describe("Leave HTTP adapter", () => {
   it("maps stable application errors to the shared HTTP envelope", async () => {
     const response = toErrorResponse(
       new LeaveApplicationError("NOT_FOUND", "Leave request was not found."),
-      "correlation-1",
+      "request-1",
     );
 
     expect(response.status).toBe(404);
@@ -48,7 +48,7 @@ describe("Leave HTTP adapter", () => {
       error: {
         code: "NOT_FOUND",
         message: "Leave request was not found.",
-        correlationId: "correlation-1",
+        requestId: "request-1",
       },
     });
   });

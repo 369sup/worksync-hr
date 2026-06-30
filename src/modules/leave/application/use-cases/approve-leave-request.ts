@@ -2,7 +2,7 @@ import type { Clock } from "@/shared/kernel/clock";
 
 import type { LeaveRequestRepository } from "../../domain/repositories/leave-request-repository";
 import type { ApproveLeaveRequestCommand } from "../commands/approve-leave-request.command";
-import type { LeaveApprovalQueryPort } from "../ports/outbound/leave-approval-query-port";
+import type { ApprovalAssignmentQueryPort } from "../ports/outbound/approval-assignment-query-port";
 import type { LeaveCommandTransactionPort } from "../ports/outbound/leave-command-transaction-port";
 import {
   assertResolvedApprover,
@@ -12,7 +12,7 @@ import {
 export class ApproveLeaveRequestUseCase {
   constructor(
     private readonly repository: LeaveRequestRepository,
-    private readonly approval: LeaveApprovalQueryPort,
+    private readonly approval: ApprovalAssignmentQueryPort,
     private readonly transactions: LeaveCommandTransactionPort,
     private readonly clock: Clock,
   ) {}
@@ -31,13 +31,13 @@ export class ApproveLeaveRequestUseCase {
 
     const approvedAt = this.clock.now();
     request.approve({
-      approverId: command.actor.employeeId!,
+      approverMembershipId: command.actor.membershipId,
+      approverEmployeeId: command.actor.employeeId!,
       approvedAt,
     });
     const snapshot = await this.transactions.commit({
       tenantId: command.actor.tenantId,
-      actorId: command.actor.userId,
-      correlationId: command.actor.correlationId,
+      actor: command.actor,
       action: "LeaveRequestApproved",
       occurredAt: approvedAt,
       request,

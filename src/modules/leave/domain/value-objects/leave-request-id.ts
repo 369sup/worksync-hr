@@ -11,7 +11,4 @@ export class LeaveRequestId {
     return new LeaveRequestId(normalized);
   }
 
-  static generate() {
-    return new LeaveRequestId(`leave_${crypto.randomUUID()}`);
-  }
 }

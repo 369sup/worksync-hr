@@ -1,17 +1,19 @@
+import type { LeaveRequestStatus } from "../../domain/aggregates/leave-request";
+
 export interface LeaveRequestListItem {
   id: string;
   employeeId: string;
   leaveTypeCode: string;
   startAt: string;
   endAt: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: LeaveRequestStatus;
   submittedAt: string;
 }
 
 export interface LeaveRequestDetail extends LeaveRequestListItem {
   leaveTypeId: string;
   reason: string | null;
-  approverId: string | null;
+  approverMembershipId: string | null;
   approvedAt: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;

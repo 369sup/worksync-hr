@@ -33,7 +33,6 @@ const glossaryPath = path.join(docsRoot, "00-project", "glossary.md");
 const tacticalPath = path.join(docsRoot, "01-architecture", "tactical-design.md");
 const strategic = documents.get(strategicPath);
 const bounded = documents.get(boundedPath);
-const glossary = documents.get(glossaryPath);
 const tactical = documents.get(tacticalPath);
 
 function requireText(document, fragment, label) {

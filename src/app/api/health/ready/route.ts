@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { readServerEnvironment } from "@/bootstrap/env/env";
-import { createPostgresDatabase } from "@/bootstrap/persistence/postgres";
+import { createFirestoreDatabase } from "@/bootstrap/persistence/firestore";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  let persistence: ReturnType<typeof createPostgresDatabase> | undefined;
+  let persistence: ReturnType<typeof createFirestoreDatabase> | undefined;
   try {
     const environment = readServerEnvironment();
-    persistence = createPostgresDatabase(environment);
+    persistence = createFirestoreDatabase(environment);
     if (!(await persistence.verifyReady())) {
       return NextResponse.json({ status: "not-ready" }, { status: 503 });
     }

@@ -14,14 +14,14 @@ export type LeaveRequestEvent =
       readonly eventType: "LeaveRequestApproved";
       readonly tenantId: string;
       readonly leaveRequestId: string;
-      readonly approverId: string;
+      readonly approverMembershipId: string;
       readonly approvedAt: string;
     }
   | {
       readonly eventType: "LeaveRequestRejected";
       readonly tenantId: string;
       readonly leaveRequestId: string;
-      readonly approverId: string;
+      readonly approverMembershipId: string;
       readonly rejectionReason: string;
       readonly rejectedAt: string;
     }

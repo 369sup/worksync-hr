@@ -13,7 +13,7 @@ export type LeaveApprovedIntegrationEvent = IntegrationEventMetadata & {
     readonly leaveTypeCode: string;
     readonly startAt: string;
     readonly endAt: string;
-    readonly approvedBy: string;
+    readonly approvedByMembershipId: string;
     readonly approvedAt: string;
   };
 };
@@ -24,7 +24,7 @@ export type LeaveRejectedIntegrationEvent = IntegrationEventMetadata & {
   readonly payload: {
     readonly leaveRequestId: string;
     readonly employeeId: string;
-    readonly rejectedBy: string;
+    readonly rejectedByMembershipId: string;
     readonly rejectedAt: string;
     readonly rejectionReason: string;
   };
@@ -82,7 +82,7 @@ export function toLeaveIntegrationEvent(input: {
           leaveTypeCode: input.request.leaveTypeCode,
           startAt: input.request.startAt,
           endAt: input.request.endAt,
-          approvedBy: input.event.approverId,
+          approvedByMembershipId: input.event.approverMembershipId,
           approvedAt: input.event.approvedAt,
         },
       };
@@ -93,7 +93,7 @@ export function toLeaveIntegrationEvent(input: {
         payload: {
           leaveRequestId: input.request.id,
           employeeId: input.request.employeeId,
-          rejectedBy: input.event.approverId,
+          rejectedByMembershipId: input.event.approverMembershipId,
           rejectedAt: input.event.rejectedAt,
           rejectionReason: input.event.rejectionReason,
         },

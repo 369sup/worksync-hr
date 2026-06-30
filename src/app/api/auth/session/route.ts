@@ -16,10 +16,10 @@ function errorResponse(
   code: string,
   message: string,
   status: number,
-  correlationId: string,
+  requestId: string,
 ) {
   return NextResponse.json(
-    { error: { code, message, correlationId } },
+    { error: { code, message, requestId } },
     { status },
   );
 }
@@ -37,13 +37,13 @@ function validateRequest(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const correlationId = crypto.randomUUID();
+  const requestId = crypto.randomUUID();
   if (!validateRequest(request)) {
     return errorResponse(
       "FORBIDDEN",
       "Invalid request proof.",
       403,
-      correlationId,
+      requestId,
     );
   }
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         "INVALID_INPUT",
         "Firebase ID token is required.",
         400,
-        correlationId,
+        requestId,
       );
     }
 
@@ -84,26 +84,26 @@ export async function POST(request: NextRequest) {
         "UNAUTHENTICATED",
         error.message,
         401,
-        correlationId,
+        requestId,
       );
     }
     return errorResponse(
       "INTERNAL_ERROR",
       "Unable to create session.",
       500,
-      correlationId,
+      requestId,
     );
   }
 }
 
 export function DELETE(request: NextRequest) {
-  const correlationId = crypto.randomUUID();
+  const requestId = crypto.randomUUID();
   if (!validateRequest(request)) {
     return errorResponse(
       "FORBIDDEN",
       "Invalid request proof.",
       403,
-      correlationId,
+      requestId,
     );
   }
 

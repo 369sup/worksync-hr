@@ -6,8 +6,8 @@ import type { ActorContext } from "@/shared/types/actor-context";
 import type { LeaveRequest } from "../../domain/aggregates/leave-request";
 import type { LeaveEligibilityPolicy } from "../../domain/policies/leave-eligibility-policy";
 import type { LeaveRequestRepository } from "../../domain/repositories/leave-request-repository";
-import type { EmployeeLeaveProfileQueryPort } from "../ports/outbound/employee-leave-profile-query-port";
-import type { LeaveWorkCalendarQueryPort } from "../ports/outbound/leave-work-calendar-query-port";
+import type { EmployeeSnapshotQueryPort } from "../ports/outbound/employee-snapshot-query-port";
+import type { WorkScheduleSnapshotQueryPort } from "../ports/outbound/work-schedule-snapshot-query-port";
 import { SubmitLeaveRequestUseCase } from "./submit-leave-request";
 
 class RecordingRepository implements LeaveRequestRepository {
@@ -40,38 +40,56 @@ const actor: ActorContext = {
   tenantId: "tenant_test",
   userId: "firebase-user-1",
   employeeId: "EMP-001",
+  membershipId: "MEM-001",
   membershipStatus: "active",
   capabilities: ["leave.submit.self"],
-  correlationId: "correlation-1",
+  scope: { kind: "self" },
+  requestId: "request-1",
+  requestSource: "api",
 };
 
-const employeeProfiles: EmployeeLeaveProfileQueryPort = {
-  async getEmployeeLeaveSnapshot(input) {
+const employees: EmployeeSnapshotQueryPort = {
+  async getEmployeeSnapshot(input) {
     return {
       tenantId: input.tenantId,
       employeeId: input.employeeId,
-      employmentStatus: "active",
-      departmentId: "DEPT-001",
-      managerId: "EMP-002",
-      timezone: "Asia/Taipei",
-      assignedCalendarId: "CAL-001",
-      hiredAt: "2020-01-01T00:00:00.000Z",
-      terminatedAt: null,
+      status: "active",
+      displayName: "Employee One",
+      version: 1,
     };
   },
 };
 
-const workCalendars: LeaveWorkCalendarQueryPort = {
-  async getLeaveWorkCalendar(input) {
+const workSchedules: WorkScheduleSnapshotQueryPort = {
+  async getWorkScheduleSnapshot(input) {
     return {
       tenantId: input.tenantId,
-      assignedCalendarId: input.assignedCalendarId,
-      timezone: input.timezone,
-      sourceVersion: "test-1",
-      workingIntervals: [{ startAt: input.startAt, endAt: input.endAt }],
+      employeeId: input.employeeId,
+      dateRange: { startAt: input.startAt, endAt: input.endAt },
+      workDays: [
+        {
+          date: "2026-07-02",
+          workingIntervals: [{ startAt: input.startAt, endAt: input.endAt }],
+        },
+      ],
+      scheduleVersion: 1,
     };
   },
 };
+
+const leaveTypes = {
+  async getLeaveTypeSnapshot(input: { tenantId: string; leaveTypeId: string }) {
+    return {
+      tenantId: input.tenantId,
+      leaveTypeId: input.leaveTypeId,
+      code: "annual-leave",
+      status: "active" as const,
+      version: 1,
+    };
+  },
+};
+
+const identifiers = { generate: () => "leave_generated" };
 
 describe("SubmitLeaveRequestUseCase", () => {
   it("uses trusted ActorContext and persists a tenant-scoped request", async () => {
@@ -83,9 +101,11 @@ describe("SubmitLeaveRequestUseCase", () => {
     };
     const useCase = new SubmitLeaveRequestUseCase(
       repository,
-      employeeProfiles,
-      workCalendars,
+      employees,
+      workSchedules,
+      leaveTypes,
       eligibilityPolicy,
+      identifiers,
       clock,
       repository,
     );
@@ -93,7 +113,6 @@ describe("SubmitLeaveRequestUseCase", () => {
     const result = await useCase.execute({
       actor,
       leaveTypeId: "LT-001",
-      leaveTypeCode: "annual-leave",
       startAt: new Date("2026-07-02T01:00:00.000Z"),
       endAt: new Date("2026-07-02T09:00:00.000Z"),
       reason: "Family appointment",
@@ -111,9 +130,11 @@ describe("SubmitLeaveRequestUseCase", () => {
   it("rejects an inactive membership before loading employee data", async () => {
     const useCase = new SubmitLeaveRequestUseCase(
       new RecordingRepository(),
-      employeeProfiles,
-      workCalendars,
+      employees,
+      workSchedules,
+      leaveTypes,
       { assertEligible: vi.fn() },
+      identifiers,
       { now: () => new Date("2026-06-28T02:00:00.000Z") },
       new RecordingRepository(),
     );
@@ -122,7 +143,6 @@ describe("SubmitLeaveRequestUseCase", () => {
       useCase.execute({
         actor: { ...actor, membershipStatus: "inactive" },
         leaveTypeId: "LT-001",
-        leaveTypeCode: "annual-leave",
         startAt: new Date("2026-07-02T01:00:00.000Z"),
         endAt: new Date("2026-07-02T09:00:00.000Z"),
         reason: "Family appointment",

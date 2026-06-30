@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { LeaveRequest } from "./leave-request";
+import { LeaveRequestId } from "../value-objects/leave-request-id";
 
 const submittedAt = new Date("2026-06-28T01:00:00.000Z");
 
 function submitRequest() {
   return LeaveRequest.submit({
     tenantId: "tenant_test",
+    id: LeaveRequestId.create("leave-test"),
     employeeId: "EMP-001",
     leaveTypeId: "LT-001",
     leaveTypeCode: "annual-leave",
@@ -34,6 +36,7 @@ describe("LeaveRequest", () => {
     expect(() =>
       LeaveRequest.submit({
         tenantId: "tenant_test",
+        id: LeaveRequestId.create("leave-invalid-period"),
         employeeId: "EMP-001",
         leaveTypeId: "LT-001",
         leaveTypeCode: "annual-leave",
@@ -54,7 +57,8 @@ describe("LeaveRequest", () => {
 
     expect(() =>
       request.approve({
-        approverId: "EMP-002",
+        approverMembershipId: "MEM-002",
+        approverEmployeeId: "EMP-002",
         approvedAt: new Date("2026-06-29T02:00:00.000Z"),
       }),
     ).toThrow("Only pending leave requests can be approved.");
@@ -65,13 +69,14 @@ describe("LeaveRequest", () => {
     request.pullDomainEvents();
 
     request.approve({
-      approverId: "EMP-002",
+      approverMembershipId: "MEM-002",
+      approverEmployeeId: "EMP-002",
       approvedAt: new Date("2026-06-29T02:00:00.000Z"),
     });
 
     expect(request.toSnapshot()).toMatchObject({
       status: "approved",
-      approverId: "EMP-002",
+      approverMembershipId: "MEM-002",
       version: 1,
     });
     expect(request.pullDomainEvents()).toEqual([
@@ -84,7 +89,8 @@ describe("LeaveRequest", () => {
 
     expect(() =>
       request.approve({
-        approverId: "EMP-001",
+        approverMembershipId: "MEM-001",
+        approverEmployeeId: "EMP-001",
         approvedAt: new Date("2026-06-29T02:00:00.000Z"),
       }),
     ).toThrow("An employee cannot approve or reject their own leave request.");
@@ -95,14 +101,16 @@ describe("LeaveRequest", () => {
 
     expect(() =>
       request.reject({
-        approverId: "EMP-002",
+        approverMembershipId: "MEM-002",
+        approverEmployeeId: "EMP-002",
         rejectedAt: new Date("2026-06-29T02:00:00.000Z"),
         rejectionReason: " ",
       }),
     ).toThrow("Rejection reason is required.");
 
     request.reject({
-      approverId: "EMP-002",
+      approverMembershipId: "MEM-002",
+      approverEmployeeId: "EMP-002",
       rejectedAt: new Date("2026-06-29T02:00:00.000Z"),
       rejectionReason: "Insufficient staffing",
     });
@@ -113,7 +121,7 @@ describe("LeaveRequest", () => {
     });
   });
 
-  it("cancels only a pending request", () => {
+  it("cancels a pending request only once", () => {
     const request = submitRequest();
     request.cancel({
       cancelledBy: "EMP-001",
@@ -130,6 +138,22 @@ describe("LeaveRequest", () => {
         cancelledBy: "EMP-001",
         cancelledAt: new Date("2026-06-29T02:00:00.000Z"),
       }),
-    ).toThrow("Only pending leave requests can be cancelled.");
+    ).toThrow("Only pending or approved leave requests can be cancelled.");
+  });
+
+  it("records cancellation after approval as a distinct state", () => {
+    const request = submitRequest();
+    request.approve({
+      approverMembershipId: "MEM-002",
+      approverEmployeeId: "EMP-002",
+      approvedAt: new Date("2026-06-29T02:00:00.000Z"),
+    });
+
+    request.cancel({
+      cancelledBy: "EMP-001",
+      cancelledAt: new Date("2026-06-30T02:00:00.000Z"),
+    });
+
+    expect(request.toSnapshot().status).toBe("cancelled-after-approval");
   });
 });

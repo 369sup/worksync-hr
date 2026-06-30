@@ -7,14 +7,15 @@ import {
   LeaveRequest,
   type LeaveRequestSnapshot,
 } from "../../domain/aggregates/leave-request";
-import { MvpLeaveEligibilityPolicy } from "../../domain/policies/leave-eligibility-policy";
+import { DefaultLeaveEligibilityPolicy } from "../../domain/policies/leave-eligibility-policy";
 import type { LeaveRequestRepository } from "../../domain/repositories/leave-request-repository";
-import type { EmployeeLeaveProfileQueryPort } from "../ports/outbound/employee-leave-profile-query-port";
-import type { LeaveApprovalQueryPort } from "../ports/outbound/leave-approval-query-port";
+import { LeaveRequestId } from "../../domain/value-objects/leave-request-id";
+import type { EmployeeSnapshotQueryPort } from "../ports/outbound/employee-snapshot-query-port";
+import type { ApprovalAssignmentQueryPort } from "../ports/outbound/approval-assignment-query-port";
 import type { LeaveCommandTransactionPort } from "../ports/outbound/leave-command-transaction-port";
 import type { LeaveRequestQueryPort } from "../ports/outbound/leave-request-query-port";
-import type { LeaveVisibilityQueryPort } from "../ports/outbound/leave-visibility-query-port";
-import type { LeaveWorkCalendarQueryPort } from "../ports/outbound/leave-work-calendar-query-port";
+import type { OrganizationTeamScopeQueryPort } from "../ports/outbound/organization-team-scope-query-port";
+import type { WorkScheduleSnapshotQueryPort } from "../ports/outbound/work-schedule-snapshot-query-port";
 import { ApproveLeaveRequestUseCase } from "./approve-leave-request";
 import { CancelLeaveRequestUseCase } from "./cancel-leave-request";
 import { GetLeaveRequestDetailUseCase } from "./get-leave-request-detail";
@@ -29,74 +30,102 @@ const employeeActor: ActorContext = {
   tenantId: "tenant_test",
   userId: "user-employee",
   employeeId: "EMP-001",
+  membershipId: "MEM-001",
   membershipStatus: "active",
   capabilities: ["leave.submit.self", "leave.cancel.self", "leave.read.self"],
-  correlationId: "correlation-employee",
+  scope: { kind: "self" },
+  requestId: "request-employee",
+  requestSource: "api",
 };
 
 const managerActor: ActorContext = {
   tenantId: "tenant_test",
   userId: "user-manager",
   employeeId: "EMP-MANAGER",
+  membershipId: "MEM-MANAGER",
   membershipStatus: "active",
-  capabilities: ["leave.approve.department", "leave.read.department"],
-  correlationId: "correlation-manager",
+  capabilities: ["leave.approve.team"],
+  scope: { kind: "organization-units", organizationUnitIds: ["ORG-001"] },
+  requestId: "request-manager",
+  requestSource: "api",
 };
 
-const approval: LeaveApprovalQueryPort = {
-  async resolveApprover(input) {
+const approval: ApprovalAssignmentQueryPort = {
+  async resolveApprovalAssignment(input) {
     return {
       tenantId: input.tenantId,
-      employeeId: input.employeeId,
-      approverId: "EMP-MANAGER",
-      source: "manager",
-      routeCode: "direct-manager",
-      validFrom: "2020-01-01T00:00:00.000Z",
+      assignmentId: "ASSIGN-001",
+      targetRef: {
+        context: "Leave",
+        type: "LeaveRequest",
+        id: input.leaveRequestId,
+      },
+      approverMembershipId: "MEM-MANAGER",
+      delegateMembershipId: null,
+      status: "assigned",
       validUntil: null,
+      version: 1,
     };
   },
 };
 
-const visibility: LeaveVisibilityQueryPort = {
-  async getManagedEmployeeIds() {
+const visibility: OrganizationTeamScopeQueryPort = {
+  async getManagedEmployeeIds(input) {
     return {
       tenantId: "tenant_test",
+      managerMembershipId: input.managerMembershipId,
       employeeIds: ["EMP-001", "EMP-014"],
     };
   },
 };
 
-const employeeProfiles: EmployeeLeaveProfileQueryPort = {
-  async getEmployeeLeaveSnapshot(input) {
+const employees: EmployeeSnapshotQueryPort = {
+  async getEmployeeSnapshot(input) {
     return {
       tenantId: input.tenantId,
       employeeId: input.employeeId,
-      employmentStatus: "active",
-      departmentId: "DEPT-001",
-      managerId: "EMP-MANAGER",
-      timezone: "Asia/Taipei",
-      assignedCalendarId: "CAL-001",
-      hiredAt: "2020-01-01T00:00:00.000Z",
-      terminatedAt: null,
+      status: "active",
+      displayName: "Employee One",
+      version: 1,
     };
   },
 };
 
-const workCalendars: LeaveWorkCalendarQueryPort = {
-  async getLeaveWorkCalendar(input) {
+const workSchedules: WorkScheduleSnapshotQueryPort = {
+  async getWorkScheduleSnapshot(input) {
     return {
       tenantId: input.tenantId,
-      assignedCalendarId: input.assignedCalendarId,
-      timezone: input.timezone,
-      sourceVersion: "test",
-      workingIntervals: [{ startAt: input.startAt, endAt: input.endAt }],
+      employeeId: input.employeeId,
+      dateRange: { startAt: input.startAt, endAt: input.endAt },
+      workDays: [
+        {
+          date: "2026-08-03",
+          workingIntervals: [{ startAt: input.startAt, endAt: input.endAt }],
+        },
+      ],
+      scheduleVersion: 1,
     };
   },
 };
+
+const leaveTypes = {
+  async getLeaveTypeSnapshot(input: { tenantId: string; leaveTypeId: string }) {
+    return {
+      tenantId: input.tenantId,
+      leaveTypeId: input.leaveTypeId,
+      code: "annual-leave",
+      status: "active" as const,
+      version: 1,
+    };
+  },
+};
+
+const identifiers = { generate: () => "leave_generated" };
 
 function pendingRequest() {
   return LeaveRequest.submit({
     tenantId: "tenant_test",
+    id: LeaveRequestId.create("leave-pending"),
     employeeId: "EMP-001",
     leaveTypeId: "LT-001",
     leaveTypeCode: "annual-leave",
@@ -151,22 +180,23 @@ class TransactionFake implements LeaveCommandTransactionPort {
   }
 }
 
-describe("Leave request MVP application use cases", () => {
+describe("Leave request application use cases", () => {
   it("replays an identical submit before overlap and persistence work", async () => {
     const repository = new RepositoryFake();
     const transactions = new TransactionFake();
     const useCase = new SubmitLeaveRequestUseCase(
       repository,
-      employeeProfiles,
-      workCalendars,
-      new MvpLeaveEligibilityPolicy(),
+      employees,
+      workSchedules,
+      leaveTypes,
+      new DefaultLeaveEligibilityPolicy(),
+      identifiers,
       clock,
       transactions,
     );
     const command = {
       actor: employeeActor,
       leaveTypeId: "LT-001",
-      leaveTypeCode: "annual-leave",
       startAt: new Date("2026-08-03T01:00:00.000Z"),
       endAt: new Date("2026-08-03T09:00:00.000Z"),
       reason: "Family appointment",
@@ -264,7 +294,7 @@ describe("Leave request MVP application use cases", () => {
           status: "pending",
           submittedAt: "2026-06-27T04:00:00.000Z",
           reason: "Family appointment",
-          approverId: null,
+          approverMembershipId: null,
           approvedAt: null,
           rejectedAt: null,
           rejectionReason: null,
@@ -281,11 +311,9 @@ describe("Leave request MVP application use cases", () => {
       },
     };
 
-    const getDetail = new GetLeaveRequestDetailUseCase(
-      query,
-      visibility,
-      clock,
-    );
+    const getDetail = new GetLeaveRequestDetailUseCase(query, visibility, clock, {
+      async append() {},
+    });
     const search = new SearchLeaveRequestsUseCase(query, visibility, clock);
     await getDetail.execute({
       actor: employeeActor,

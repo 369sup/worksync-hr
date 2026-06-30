@@ -11,7 +11,7 @@ export default function HomePage() {
         </p>
         <div className="grid gap-4">
           <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance md:text-6xl">
-            SUP HR App scaffold now runs on{" "}
+            WorkSync HR runs on{" "}
             <span className="text-[var(--color-accent)]">src/app</span>.
           </h1>
           <p className="max-w-3xl text-base leading-8 text-slate-600 md:text-lg">
@@ -53,7 +53,7 @@ export default function HomePage() {
         <article className="rounded-[1.5rem] border border-black/10 bg-[var(--color-surface)] p-6">
           <h2 className="text-xl font-semibold">First bounded context</h2>
           <p className="mt-3 text-sm leading-7 text-slate-600">
-            <code>{appManifest.primaryContext}</code> is scaffolded with domain,
+            <code>{appManifest.primaryContext}</code> is implemented with domain,
             application, adapter, and contract folders.
           </p>
         </article>

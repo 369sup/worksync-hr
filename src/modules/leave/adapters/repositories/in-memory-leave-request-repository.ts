@@ -2,7 +2,6 @@ import {
   LeaveRequest,
   type LeaveRequestSnapshot,
 } from "../../domain/aggregates/leave-request";
-import { toLeaveIntegrationEvent } from "../../application/contracts/leave-integration-event";
 import { LeaveApplicationError } from "../../application/errors/leave-application-error";
 import type {
   LeaveAuditAction,
@@ -24,7 +23,7 @@ const seedData: LeaveRequestSnapshot[] = [
     reason: "Family trip planning",
     status: "pending",
     submittedAt: "2026-06-26T08:00:00.000Z",
-    approverId: null,
+    approverMembershipId: null,
     approvedAt: null,
     rejectedAt: null,
     rejectionReason: null,
@@ -44,7 +43,7 @@ const seedData: LeaveRequestSnapshot[] = [
     reason: "Medical appointment follow-up",
     status: "approved",
     submittedAt: "2026-06-25T03:30:00.000Z",
-    approverId: "EMP-002",
+    approverMembershipId: "MEM-002",
     approvedAt: "2026-06-25T04:15:00.000Z",
     rejectedAt: null,
     rejectionReason: null,
@@ -78,10 +77,10 @@ export class InMemoryLeaveRequestRepository
     action: LeaveAuditAction;
     targetId: string;
     occurredAt: string;
-    correlationId: string;
+    requestId: string;
+    requestSource: "ui" | "api" | "system" | "batch";
     reason?: string;
   }[] = [];
-  private readonly outbox: ReturnType<typeof toLeaveIntegrationEvent>[] = [];
 
   async save(tenantId: string, request: LeaveRequest) {
     const snapshot = request.toSnapshot();
@@ -244,24 +243,14 @@ export class InMemoryLeaveRequestRepository
     }
     this.audits.push({
       tenantId: input.tenantId,
-      actorId: input.actorId,
+      actorId: input.actor.userId,
       action: input.action,
       targetId: snapshot.id,
       occurredAt: input.occurredAt.toISOString(),
-      correlationId: input.correlationId,
+      requestId: input.actor.requestId,
+      requestSource: input.actor.requestSource,
       ...(input.auditReason ? { reason: input.auditReason } : {}),
     });
-    for (const event of input.domainEvents) {
-      if (event.eventType === "LeaveRequestSubmitted") continue;
-      this.outbox.push(
-        toLeaveIntegrationEvent({
-          event,
-          request: snapshot,
-          eventId: `event_${crypto.randomUUID()}`,
-          correlationId: input.correlationId,
-        }),
-      );
-    }
     return snapshot;
   }
 
@@ -269,9 +258,6 @@ export class InMemoryLeaveRequestRepository
     return this.audits.map((record) => ({ ...record }));
   }
 
-  getOutboxEvents() {
-    return [...this.outbox];
-  }
 }
 
 function isVisible(
@@ -303,7 +289,7 @@ function toDetail(item: LeaveRequestSnapshot, includeSensitive: boolean) {
     ...toListItem(item),
     leaveTypeId: item.leaveTypeId,
     reason: includeSensitive ? item.reason : null,
-    approverId: item.approverId,
+    approverMembershipId: item.approverMembershipId,
     approvedAt: item.approvedAt,
     rejectedAt: item.rejectedAt,
     rejectionReason: includeSensitive ? item.rejectionReason : null,

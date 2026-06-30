@@ -4,8 +4,6 @@ import { readServerEnvironment } from "./env";
 
 const validEnvironment: NodeJS.ProcessEnv = {
   NODE_ENV: "test",
-  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/sup_hr",
-  APP_TENANT_ID: "tenant_test",
   FIREBASE_PROJECT_ID: "firebase-test",
   FIREBASE_CLIENT_EMAIL: "firebase@example.com",
   FIREBASE_PRIVATE_KEY: "line-1\\nline-2",
@@ -23,7 +21,7 @@ describe("readServerEnvironment", () => {
 
   it("fails fast without a required value", () => {
     expect(() =>
-      readServerEnvironment({ ...validEnvironment, APP_TENANT_ID: "" }),
-    ).toThrow("Missing required environment variable: APP_TENANT_ID");
+      readServerEnvironment({ ...validEnvironment, FIREBASE_PROJECT_ID: "" }),
+    ).toThrow("Missing required environment variable: FIREBASE_PROJECT_ID");
   });
 });

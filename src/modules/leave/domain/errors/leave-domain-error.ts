@@ -42,7 +42,7 @@ export class LeaveRequestCannotBeCancelledError extends LeaveDomainError {
   readonly code = "INVALID_STATE";
 
   constructor() {
-    super("Only pending leave requests can be cancelled.");
+    super("Only pending or approved leave requests can be cancelled.");
     this.name = "LeaveRequestCannotBeCancelledError";
   }
 }

@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
     const result = await leave.submit.execute({
       actor,
       leaveTypeId: requiredString(body, "leaveTypeId"),
-      leaveTypeCode: requiredString(body, "leaveTypeCode"),
       startAt: offsetDate(startAt, "startAt"),
       endAt: offsetDate(endAt, "endAt"),
       reason: requiredString(body, "reason"),

@@ -50,8 +50,7 @@ export class CancelLeaveRequestUseCase {
     });
     const snapshot = await this.transactions.commit({
       tenantId: command.actor.tenantId,
-      actorId: command.actor.userId,
-      correlationId: command.actor.correlationId,
+      actor: command.actor,
       action: "LeaveRequestCancelled",
       occurredAt: cancelledAt,
       ...(overrideReason ? { auditReason: overrideReason } : {}),

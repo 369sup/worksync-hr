@@ -7,9 +7,9 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-[1.5rem] border border-black/10 bg-white px-6 py-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-            SUP HR Workspace
+            WorkSync HR
           </p>
-          <h1 className="text-2xl font-semibold">Application shell</h1>
+          <h1 className="text-2xl font-semibold">HR workspace</h1>
         </div>
         <nav className="flex flex-wrap gap-3 text-sm font-medium">
           <Link
